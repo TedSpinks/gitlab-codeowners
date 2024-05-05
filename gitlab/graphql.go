@@ -61,28 +61,34 @@ func (server GraphQlServer) CheckForGitLabUsers(usernameList []string) (username
 // who have enabled a "Public email" in their GitLab user settings.
 // Search documentation: https://docs.gitlab.com/ee/api/graphql/reference/#queryusers
 func (server GraphQlServer) CheckForGitLabUsersByEmail(emailList []string) (emailsFound []string, err error) {
+	// Query GitLab for each email, individually
 	for _, email := range emailList {
-		query := `query { users(search: "` + email + `") { pageInfo { endCursor startCursor hasNextPage } nodes { id username publicEmail emails { nodes {email} } }}}`
-		_, jsonResponse, err := server.RunGraphQlQuery(query)
-		if err != nil {
-			wrappedErr := fmt.Errorf("CheckForGitLabUsersByEmail() failed on email '%v': %w", email, err)
-			return emailsFound, wrappedErr
-		}
-		var queryResults UserQueryResponse
-		err = json.Unmarshal(jsonResponse, &queryResults)
-		if err != nil {
-			wrappedErr := fmt.Errorf("CheckForGitLabUsersByEmail() could not decode JSON response from search for email '%v': %w", email, err)
-			slog.Debug("JSON response: " + string(jsonResponse))
-			return emailsFound, wrappedErr
-		}
-		for _, user := range queryResults.Data.Users.Nodes {
-			if (user.PublicEmail != "") && (!slices.Contains(emailsFound, user.PublicEmail)) {
-				emailsFound = append(emailsFound, user.PublicEmail)
+		// Only do the search if the email wasn't already found
+		if !stringSliceContains(emailsFound, email) {
+			query := `query { users(search: "` + email + `") { pageInfo { endCursor startCursor hasNextPage } nodes { id username publicEmail emails { nodes {email} } }}}`
+			_, jsonResponse, err := server.RunGraphQlQuery(query)
+			if err != nil {
+				wrappedErr := fmt.Errorf("CheckForGitLabUsersByEmail() failed on email '%v': %w", email, err)
+				return emailsFound, wrappedErr
 			}
-			for _, privateEmail := range user.Emails.Nodes {
-				privateEmailAddress := privateEmail.Email
-				if !slices.Contains(emailsFound, privateEmailAddress) {
-					emailsFound = append(emailsFound, privateEmailAddress)
+			var queryResults UserQueryResponse
+			err = json.Unmarshal(jsonResponse, &queryResults)
+			if err != nil {
+				wrappedErr := fmt.Errorf("CheckForGitLabUsersByEmail() could not decode JSON response from search for email '%v': %w", email, err)
+				slog.Debug("JSON response: " + string(jsonResponse))
+				return emailsFound, wrappedErr
+			}
+			for _, user := range queryResults.Data.Users.Nodes {
+				if (user.PublicEmail != "") && (!slices.Contains(emailsFound, user.PublicEmail)) {
+					emailsFound = append(emailsFound, user.PublicEmail)
+				}
+				for _, privateEmail := range user.Emails.Nodes {
+					privateEmailAddress := privateEmail.Email
+					if !slices.Contains(emailsFound, privateEmailAddress) {
+						// Add all emails to the found list, not just the one we're looking for
+						// This could prevent having to do some GraphQL searches later on in the emailList
+						emailsFound = append(emailsFound, privateEmailAddress)
+					}
 				}
 			}
 		}
@@ -113,6 +119,38 @@ func (server GraphQlServer) CheckForGroups(groupNameList []string) (groupsFound 
 		}
 	}
 	return groupsFound, err
+}
+
+// Documentation: https://docs.gitlab.com/ee/api/graphql/reference/#repositoryvalidatecodeownerfile
+func (server GraphQlServer) CheckCodeownersSyntax(codeownersPath string, projectPath string, branch string) (err error) {
+	// GraphQL search doesn't understand relative paths
+	codeownersPath = strings.TrimPrefix(codeownersPath, "./")
+	query := `query { project(fullPath: "` + projectPath + `") { repository { validateCodeownerFile(ref: "` + branch +
+		`", path: "` + codeownersPath + `") { total validationErrors { code lines }}}}}`
+	_, jsonResponse, err := server.RunGraphQlQuery(query)
+	if err != nil {
+		return fmt.Errorf("CheckCodeownersSyntax() failed: %w", err)
+	}
+	var queryResults ValidateCodeownersResponse
+	err = json.Unmarshal(jsonResponse, &queryResults)
+	if err != nil {
+		wrappedErr := fmt.Errorf("CheckCodeownersSyntax() could not decode JSON response from GitLab: %w", err)
+		slog.Debug("JSON response: " + string(jsonResponse))
+		return wrappedErr
+	}
+	if queryResults.Data.Project.Repository.ValidateCodeownerFile == nil {
+		return fmt.Errorf("gitlab was unable to find the CODEOWNERS file in project '%v' on branch '%v' at the specified path: '%v'", projectPath, branch, codeownersPath)
+	}
+	if queryResults.Data.Project.Repository.ValidateCodeownerFile.Total > 0 {
+		errorList := []error{}
+		for _, validationError := range queryResults.Data.Project.Repository.ValidateCodeownerFile.ValidationErrors {
+			errorMessage := validationError.Code
+			lines := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(validationError.Lines)), ", "), "[]")
+			errorList = append(errorList, fmt.Errorf("validation error '%v' on lines: %v", errorMessage, lines))
+		}
+		err = errors.Join(errorList...)
+	}
+	return err
 }
 
 // Run the specified query string against the GitLab server's GraphQL API. Returns the API's response as
@@ -190,4 +228,13 @@ func getGraphQlErrors(jsonResponse []byte) (err error) {
 func consolidateWhitespace(s string) string {
 	// strings.Fields() splits on any amount of white space
 	return strings.Join(strings.Fields(strings.TrimSpace(s)), " ")
+}
+
+func stringSliceContains(slice []string, s string) bool {
+	for i := 0; i < len(slice); i++ {
+		if slice[i] == s {
+			return true
+		}
+	}
+	return false
 }

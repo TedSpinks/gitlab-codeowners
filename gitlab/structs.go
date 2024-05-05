@@ -6,6 +6,25 @@ type GraphQlServer struct {
 	Timeout     int    // Timeout for GraphQL requests, in seconds
 }
 
+type ValidateCodeownersResponse struct {
+	Data struct {
+		Project struct {
+			Repository struct {
+				// This is a pointer so that we can check for a nil value (indicates a bad CODEOWNERS path)
+				ValidateCodeownerFile *ValidateCodeownersFile `json:"validateCodeownerFile"`
+			} `json:"repository"`
+		} `json:"project"`
+	} `json:"data"`
+}
+
+type ValidateCodeownersFile struct {
+	Total            int `json:"total"`
+	ValidationErrors []struct {
+		Code  string `json:"code"`
+		Lines []int  `json:"lines"`
+	} `json:"validationErrors"`
+}
+
 type GroupQueryResponse struct {
 	Data struct {
 		Group struct {
@@ -22,29 +41,23 @@ type GroupQueryResponse struct {
 type UserQueryResponse struct {
 	Data struct {
 		Users struct {
-			PageInfo PageInfo   `json:"pageInfo"`
-			Nodes    []UserNode `json:"nodes"`
+			PageInfo struct {
+				EndCursor   string `json:"endCursor"`
+				StartCursor string `json:"startCursor"`
+				HasNextPage bool   `json:"hasNextPage"`
+			} `json:"pageInfo"`
+			Nodes []struct {
+				Id          string `json:"id"`
+				Username    string `json:"username"`
+				PublicEmail string `json:"publicEmail"`
+				Emails      struct {
+					Nodes []struct {
+						Email string `json:"email"`
+					} `json:"nodes"`
+				} `json:"emails"`
+			} `json:"nodes"`
 		} `json:"users"`
 	} `json:"data"`
-}
-
-type PageInfo struct {
-	EndCursor   string `json:"endCursor"`
-	StartCursor string `json:"startCursor"`
-	HasNextPage bool   `json:"hasNextPage"`
-}
-
-type UserNode struct {
-	Id          string `json:"id"`
-	Username    string `json:"username"`
-	PublicEmail string `json:"publicEmail"`
-	Emails      struct {
-		Nodes []EmailNode `json:"nodes"`
-	} `json:"emails"`
-}
-
-type EmailNode struct {
-	Email string `json:"email"`
 }
 
 type qraphqlQuery struct {

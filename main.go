@@ -11,9 +11,7 @@ import (
 )
 
 // TO-DO
-// Upload to GitLab repo
 // Add interfaces to main package
-// Read about writing a parser
 
 type envVarArgs struct {
 	ProjectPath       string `env:"CI_PROJECT_PATH,notEmpty"`
@@ -62,8 +60,14 @@ func main() {
 		panic("Error(s) occured during group validation: " + err.Error())
 	}
 	fmt.Println("Groups found: " + strings.Join(groupsFound, ", "))
+	// Check CODEOWNERS
+	err = server.CheckCodeownersSyntax("docs/CODEOWNERS", "tedspinks/test-codeowners", "main")
+	if err != nil {
+		panic("Error(s) occured during syntax validation: " + err.Error())
+	}
 }
 
+// Set slog's handler to either Info or Debug logging level
 func setLogLevel(setToDebug bool) {
 	logLevel := slog.LevelInfo
 	if setToDebug {
