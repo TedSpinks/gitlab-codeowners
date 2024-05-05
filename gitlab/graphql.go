@@ -90,6 +90,31 @@ func (server GraphQlServer) CheckForGitLabUsersByEmail(emailList []string) (emai
 	return emailsFound, err
 }
 
+// Search in GitLab for the specified list of Groups. Return a list of all of the Groups that
+// were found in GitLab. Will only return groups to which the input GITLAB_TOKEN has access.
+// GitLab GraphQL Documentation: https://docs.gitlab.com/ee/api/graphql/reference/#querygroup
+func (server GraphQlServer) CheckForGroups(groupNameList []string) (groupsFound []string, err error) {
+	for _, groupName := range groupNameList {
+		query := `{ group(fullPath: "` + groupName + `") { id name path fullName fullPath visibility }}`
+		_, jsonResponse, err := server.RunGraphQlQuery(query)
+		if err != nil {
+			wrappedErr := fmt.Errorf("CheckForGroups() failed on group '%v': %w", groupName, err)
+			return groupsFound, wrappedErr
+		}
+		var queryResults GroupQueryResponse
+		err = json.Unmarshal(jsonResponse, &queryResults)
+		if err != nil {
+			wrappedErr := fmt.Errorf("CheckForGroups() could not decode JSON response from search for group '%v': %w", groupName, err)
+			slog.Debug("JSON response: " + string(jsonResponse))
+			return groupsFound, wrappedErr
+		}
+		if queryResults.Data.Group.Path != "" {
+			groupsFound = append(groupsFound, queryResults.Data.Group.Path)
+		}
+	}
+	return groupsFound, err
+}
+
 // Run the specified query string against the GitLab server's GraphQL API. Returns the API's response as
 // a raw (JSON) byte slice, so that the calling function can decode it to its expected type.
 func (server GraphQlServer) RunGraphQlQuery(query string) (statusCode int, responseBody []byte, err error) {

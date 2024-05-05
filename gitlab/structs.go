@@ -6,6 +6,19 @@ type GraphQlServer struct {
 	Timeout     int    // Timeout for GraphQL requests, in seconds
 }
 
+type GroupQueryResponse struct {
+	Data struct {
+		Group struct {
+			Id         string `json:"id"`
+			Name       string `json:"name"`
+			Path       string `json:"path"`
+			FullName   string `json:"fullName"`
+			FullPath   string `json:"fullPath"`
+			Visibility string `json:"visibility"`
+		} `json:"group"`
+	} `json:"data"`
+}
+
 type UserQueryResponse struct {
 	Data struct {
 		Users struct {

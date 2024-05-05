@@ -41,18 +41,27 @@ func main() {
 		GitlabToken: envVars.GitlabToken,
 		Timeout:     envVars.GitlabTimeoutSecs,
 	}
+	// Check Users
 	userList := []string{"ted-cdw", "tedspinks"}
 	usersFound, err := server.CheckForGitLabUsers(userList)
 	if err != nil {
 		panic("Error(s) occured during user validation: " + err.Error())
 	}
 	fmt.Println("Users found: " + strings.Join(usersFound, ", "))
+	// Check emails
 	emailList := []string{"ted.spinks@cdw.com", "gtspinks@hotmail.com"}
 	emailsFound, err := server.CheckForGitLabUsersByEmail(emailList)
 	if err != nil {
 		panic("Error(s) occured during email validation: " + err.Error())
 	}
 	fmt.Println("Emails found: " + strings.Join(emailsFound, ", "))
+	// Check groups
+	groupList := []string{"ignw1", "ignw2"}
+	groupsFound, err := server.CheckForGroups(groupList)
+	if err != nil {
+		panic("Error(s) occured during group validation: " + err.Error())
+	}
+	fmt.Println("Groups found: " + strings.Join(groupsFound, ", "))
 }
 
 func setLogLevel(setToDebug bool) {
