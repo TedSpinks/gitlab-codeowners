@@ -64,7 +64,7 @@ func (server GraphQlServer) CheckForGitLabUsersByEmail(emailList []string) (emai
 	// Query GitLab for each email, individually
 	for _, email := range emailList {
 		// Only do the search if the email wasn't already found
-		if !stringSliceContains(emailsFound, email) {
+		if !slices.Contains(emailsFound, email) {
 			query := `query { users(search: "` + email + `") { pageInfo { endCursor startCursor hasNextPage } nodes { id username publicEmail emails { nodes {email} } }}}`
 			_, jsonResponse, err := server.RunGraphQlQuery(query)
 			if err != nil {
@@ -75,7 +75,6 @@ func (server GraphQlServer) CheckForGitLabUsersByEmail(emailList []string) (emai
 			err = json.Unmarshal(jsonResponse, &queryResults)
 			if err != nil {
 				wrappedErr := fmt.Errorf("CheckForGitLabUsersByEmail() could not decode JSON response from search for email '%v': %w", email, err)
-				slog.Debug("JSON response: " + string(jsonResponse))
 				return emailsFound, wrappedErr
 			}
 			for _, user := range queryResults.Data.Users.Nodes {
@@ -111,7 +110,6 @@ func (server GraphQlServer) CheckForGroups(groupNameList []string) (groupsFound 
 		err = json.Unmarshal(jsonResponse, &queryResults)
 		if err != nil {
 			wrappedErr := fmt.Errorf("CheckForGroups() could not decode JSON response from search for group '%v': %w", groupName, err)
-			slog.Debug("JSON response: " + string(jsonResponse))
 			return groupsFound, wrappedErr
 		}
 		if queryResults.Data.Group.Path != "" {
@@ -134,9 +132,7 @@ func (server GraphQlServer) CheckCodeownersSyntax(codeownersPath string, project
 	var queryResults ValidateCodeownersResponse
 	err = json.Unmarshal(jsonResponse, &queryResults)
 	if err != nil {
-		wrappedErr := fmt.Errorf("CheckCodeownersSyntax() could not decode JSON response from GitLab: %w", err)
-		slog.Debug("JSON response: " + string(jsonResponse))
-		return wrappedErr
+		return fmt.Errorf("CheckCodeownersSyntax() could not decode JSON response from GitLab: %w", err)
 	}
 	if queryResults.Data.Project.Repository.ValidateCodeownerFile == nil {
 		return fmt.Errorf("gitlab was unable to find the CODEOWNERS file in project '%v' on branch '%v' at the specified path: '%v'", projectPath, branch, codeownersPath)
@@ -192,6 +188,7 @@ func (server GraphQlServer) RunGraphQlQuery(query string) (statusCode int, respo
 		wrappedErr := fmt.Errorf("error reading response from server '%v' with GraphQL query '%v': '%w'", server.GraphQlUrl, query, err)
 		return statusCode, responseBody, wrappedErr
 	}
+	slog.Debug("HTTP response received:", slog.Any(fmt.Sprint(res.StatusCode), responseBody))
 	if res.StatusCode != http.StatusOK {
 		err = fmt.Errorf("graphQL request to server '%v' with query '%v' returned status %d", server.GraphQlUrl, query, res.StatusCode)
 		return statusCode, responseBody, err
@@ -201,7 +198,6 @@ func (server GraphQlServer) RunGraphQlQuery(query string) (statusCode int, respo
 		wrappedErr := fmt.Errorf("graphQL query '%v' received status code %d and errors: %w", query, res.StatusCode, err)
 		return statusCode, responseBody, wrappedErr
 	}
-	slog.Debug("Successful HTTP response:", slog.Any(fmt.Sprint(res.StatusCode), responseBody))
 	return statusCode, responseBody, err
 }
 
@@ -228,13 +224,4 @@ func getGraphQlErrors(jsonResponse []byte) (err error) {
 func consolidateWhitespace(s string) string {
 	// strings.Fields() splits on any amount of white space
 	return strings.Join(strings.Fields(strings.TrimSpace(s)), " ")
-}
-
-func stringSliceContains(slice []string, s string) bool {
-	for i := 0; i < len(slice); i++ {
-		if slice[i] == s {
-			return true
-		}
-	}
-	return false
 }

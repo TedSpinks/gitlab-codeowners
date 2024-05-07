@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/caarlos0/env/v11"
+	"gitlab.com/tedspinks/gitlab-codeowners/analysis"
 	"gitlab.com/tedspinks/gitlab-codeowners/gitlab"
 )
 
@@ -39,6 +40,10 @@ func main() {
 		GitlabToken: envVars.GitlabToken,
 		Timeout:     envVars.GitlabTimeoutSecs,
 	}
+	// Find CODEOWNERS file
+	co := analysis.Anatomy{}
+	co.DetermineCodeownersPath()
+	fmt.Println("CODEOWNERS path: " + co.CodeownersFilePath)
 	// Check Users
 	userList := []string{"ted-cdw", "tedspinks"}
 	usersFound, err := server.CheckForGitLabUsers(userList)
