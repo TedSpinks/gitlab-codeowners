@@ -11,9 +11,6 @@ import (
 	"gitlab.com/tedspinks/gitlab-codeowners/gitlab"
 )
 
-// TO-DO
-// Add interfaces to main package
-
 type envVarArgs struct {
 	ProjectPath       string `env:"CI_PROJECT_PATH,notEmpty"`
 	Branch            string `env:"CI_COMMIT_REF_NAME,notEmpty"`
@@ -26,24 +23,21 @@ type envVarArgs struct {
 
 func main() {
 	// Get args from env vars
-	envVars := envVarArgs{}
+	eVars := envVarArgs{}
 	opts := env.Options{RequiredIfNoDef: true}
-	err := env.ParseWithOptions(&envVars, opts)
+	err := env.ParseWithOptions(&eVars, opts)
 	if err != nil {
 		panic(err.Error())
 	}
 	// Setup logging
-	setLogLevel(envVars.Debug)
+	setLogLevel(eVars.Debug)
 	// Setup GitLab connection
 	server := gitlab.GraphQlServer{
-		GraphQlUrl:  envVars.GitlabQraphqlUrl,
-		GitlabToken: envVars.GitlabToken,
-		Timeout:     envVars.GitlabTimeoutSecs,
+		GraphQlUrl:  eVars.GitlabQraphqlUrl,
+		GitlabToken: eVars.GitlabToken,
+		Timeout:     eVars.GitlabTimeoutSecs,
 	}
-	// Find CODEOWNERS file
-	co := analysis.Anatomy{}
-	co.DetermineCodeownersPath()
-	fmt.Println("CODEOWNERS path: " + co.CodeownersFilePath)
+	ValidateCodeownersSyntax(&analysis.Co, server, eVars.ProjectPath, eVars.Branch)
 	// Check Users
 	userList := []string{"ted-cdw", "tedspinks"}
 	usersFound, err := server.CheckForGitLabUsers(userList)
@@ -72,6 +66,15 @@ func main() {
 	}
 }
 
+func ValidateCodeownersSyntax(pathPrint coPathPrinter, coCheck coChecker, projectPath string, branch string) {
+	coPath := pathPrint.CoPath()
+	err := coCheck.CheckCodeownersSyntax(coPath, projectPath, branch)
+	if err != nil {
+		err = fmt.Errorf("CODEOWNERS syntax check resulted in error(s): %w", err)
+		panic(err)
+	}
+}
+
 // Set slog's handler to either Info or Debug logging level
 func setLogLevel(setToDebug bool) {
 	logLevel := slog.LevelInfo
@@ -83,8 +86,4 @@ func setLogLevel(setToDebug bool) {
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
 	slog.SetDefault(logger)
-}
-
-type UserChecker interface {
-	CheckForGitLabUsers(usernameList []string) (usernamesFound []string)
 }

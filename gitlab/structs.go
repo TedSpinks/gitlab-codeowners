@@ -10,7 +10,7 @@ type ValidateCodeownersResponse struct {
 	Data struct {
 		Project struct {
 			Repository struct {
-				// This is a pointer so that we can check for a nil value (indicates a bad CODEOWNERS path)
+				// This is a pointer so that we can check for a nil value (indicates a bad CODEOWNERS file path)
 				ValidateCodeownerFile *ValidateCodeownersFile `json:"validateCodeownerFile"`
 			} `json:"repository"`
 		} `json:"project"`

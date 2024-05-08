@@ -1,6 +1,6 @@
 package analysis
 
-type Anatomy struct {
+type CodeownersFileAnatomy struct {
 	CodeownersFilePath   string
 	CodeownersFileLines  []string
 	FilePatterns         []string
