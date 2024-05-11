@@ -37,7 +37,13 @@ func main() {
 		GitlabToken: eVars.GitlabToken,
 		Timeout:     eVars.GitlabTimeoutSecs,
 	}
-	ValidateCodeownersSyntax(&analysis.Co, server, eVars.ProjectPath, eVars.Branch)
+	server.CheckCodeownersSyntax(analysis.Co.CodeownersFilePath, eVars.ProjectPath, eVars.Branch)
+	analysis.Co.Analyze()
+	fmt.Println("Section Headings", analysis.Co.SectionHeadings)
+	fmt.Println("File Patterns", analysis.Co.FilePatterns)
+	fmt.Println("UserAndGroupPatterns", analysis.Co.UserAndGroupPatterns)
+	fmt.Println("EmailPatterns", analysis.Co.EmailPatterns)
+	fmt.Println("IgnoredPatterns", analysis.Co.IgnoredPatterns)
 	// Check Users
 	userList := []string{"ted-cdw", "tedspinks"}
 	usersFound, err := server.CheckForGitLabUsers(userList)
@@ -63,15 +69,6 @@ func main() {
 	err = server.CheckCodeownersSyntax("docs/CODEOWNERS", "tedspinks/test-codeowners", "main")
 	if err != nil {
 		panic("Error(s) occured during syntax validation: " + err.Error())
-	}
-}
-
-func ValidateCodeownersSyntax(pathPrint coPathPrinter, coCheck coChecker, projectPath string, branch string) {
-	coPath := pathPrint.CoPath()
-	err := coCheck.CheckCodeownersSyntax(coPath, projectPath, branch)
-	if err != nil {
-		err = fmt.Errorf("CODEOWNERS syntax check resulted in error(s): %w", err)
-		panic(err)
 	}
 }
 
