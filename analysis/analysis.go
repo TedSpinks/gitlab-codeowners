@@ -19,11 +19,6 @@ func init() {
 	}
 }
 
-// Get the path to the local CODEOWNERS file.
-func (co *CodeownersFileAnatomy) CoPath() (codeownersFilePath string) {
-	return co.CodeownersFilePath
-}
-
 func (co *CodeownersFileAnatomy) determineCodeownersPath() error {
 	supportedLocations := [...]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitlab/CODEOWNERS"}
 	for _, location := range supportedLocations {
@@ -32,6 +27,7 @@ func (co *CodeownersFileAnatomy) determineCodeownersPath() error {
 			slog.Debug(err.Error())
 		}
 		if coExists {
+			slog.Debug("Found CODEOWNERS file at location `" + location + "'")
 			co.CodeownersFilePath = location
 			return nil
 		}
@@ -68,10 +64,15 @@ func (co *CodeownersFileAnatomy) Analyze() {
 	ignoredPatternsMap := map[string]bool{}
 	// Analyze each line of the CODEOWNERS file
 	for _, l := range co.CodeownersFileLines {
+		slog.Debug("Processing line '" + l + "'")
 		sectionHeading, filePattern, ownerPatterns := splitCodeownersLine(l)
+		slog.Debug(fmt.Sprintf("Section Heading: '%v', File Pattern: '%v', Owner Pattern(s): '%v'",
+			sectionHeading, filePattern, ownerPatterns))
 		sectionHeadingsMap[sectionHeading] = true
 		filePatternsMap[filePattern] = true
 		usersOrGroups, emails, ignored := splitOwnerPatterns(ownerPatterns)
+		slog.Debug(fmt.Sprintf("usersOrGroups: '%v', emails: '%v', ignored: '%v'",
+			usersOrGroups, emails, ignored))
 		for _, ug := range usersOrGroups {
 			userAndGroupPatternsMap[ug] = true
 		}
@@ -84,17 +85,19 @@ func (co *CodeownersFileAnatomy) Analyze() {
 	}
 	// Write unique patterns to co object
 	co.Analyzed = true
-	co.SectionHeadings = boolMapToSlice(sectionHeadingsMap)
-	co.FilePatterns = boolMapToSlice(filePatternsMap)
-	co.UserAndGroupPatterns = boolMapToSlice(userAndGroupPatternsMap)
-	co.EmailPatterns = boolMapToSlice(emailPatternsMap)
-	co.IgnoredPatterns = boolMapToSlice(ignoredPatternsMap)
+	co.SectionHeadings = setMapToSlice(sectionHeadingsMap)
+	co.FilePatterns = setMapToSlice(filePatternsMap)
+	co.UserAndGroupPatterns = setMapToSlice(userAndGroupPatternsMap)
+	co.EmailPatterns = setMapToSlice(emailPatternsMap)
+	co.IgnoredPatterns = setMapToSlice(ignoredPatternsMap)
 }
 
-func boolMapToSlice(m map[string]bool) []string {
+// Convert a map that was used as a set (list of *unique* strings) into a slice of strings
+func setMapToSlice(m map[string]bool) []string {
 	i := 0
+	delete(m, "") // Delete any empty strings (junk) returned by splitCodeownersLine() and splitOwnerPatterns()
 	keys := make([]string, len(m))
-	for k, _ := range m {
+	for k := range m {
 		keys[i] = k
 		i++
 	}
