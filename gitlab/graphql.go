@@ -16,7 +16,7 @@ import (
 // Search in GitLab for the specified list of potential usernames. Return a list of all of the
 // usernames that were found as valid users in GitLab.
 // Search documentation: https://docs.gitlab.com/ee/api/graphql/users_example.html
-func (server GraphQlServer) CheckForGitLabUsers(usernameList []string) (usernamesFound []string, err error) {
+func (server GraphQlServer) CheckForUsers(usernameList []string) (usernamesFound []string, err error) {
 	// Create the GraphQL query string
 	usernameListString := ""
 	for i := 0; i < len(usernameList); i++ {
@@ -60,7 +60,7 @@ func (server GraphQlServer) CheckForGitLabUsers(usernameList []string) (username
 // Otherwise, the seach results will be error-free, but will only contain emails of users
 // who have enabled a "Public email" in their GitLab user settings.
 // Search documentation: https://docs.gitlab.com/ee/api/graphql/reference/#queryusers
-func (server GraphQlServer) CheckForGitLabUsersByEmail(emailList []string) (emailsFound []string, err error) {
+func (server GraphQlServer) CheckForUsersByEmail(emailList []string) (emailsFound []string, err error) {
 	// Query GitLab for each email, individually
 	for _, email := range emailList {
 		// Only do the search if the email wasn't already found

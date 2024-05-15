@@ -4,7 +4,7 @@
 # app/ @commented-rule
 
 # Specify a default Code Owner by using a wildcard:
-* @default-codeowner
+* @tedspinks
 
 # Specify multiple Code Owners by using a tab or space:
 * @multiple @code @owners

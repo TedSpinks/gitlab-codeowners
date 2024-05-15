@@ -56,7 +56,7 @@ func (co *CodeownersFileAnatomy) Analyze() {
 	if len(co.CodeownersFileLines) == 0 {
 		co.readCodeownersFile()
 	}
-	// Define sets (map of bool) to record unique patterns with no dupes
+	// Define sets (string map of bool) to record unique patterns with no dupes
 	sectionHeadingsMap := map[string]bool{}
 	filePatternsMap := map[string]bool{}
 	userAndGroupPatternsMap := map[string]bool{}
@@ -74,7 +74,8 @@ func (co *CodeownersFileAnatomy) Analyze() {
 		slog.Debug(fmt.Sprintf("usersOrGroups: '%v', emails: '%v', ignored: '%v'",
 			usersOrGroups, emails, ignored))
 		for _, ug := range usersOrGroups {
-			userAndGroupPatternsMap[ug] = true
+			// Remove the "@" owner prefix, since it is not actually part of a GitLab username or group name
+			userAndGroupPatternsMap[strings.TrimPrefix(ug, "@")] = true
 		}
 		for _, e := range emails {
 			emailPatternsMap[e] = true
@@ -167,7 +168,6 @@ func splitCodeownersLine(line string) (sectionHeading string, filePattern string
 			}
 		}
 	}
-
 	// If no split position was found, the whole line is either a [section heading] or a naked file pattern
 	if splitPosition == 0 {
 		if sectionHeadingStarted {
@@ -177,7 +177,6 @@ func splitCodeownersLine(line string) (sectionHeading string, filePattern string
 		}
 		return
 	}
-
 	// Split the line and return results
 	if sectionHeadingStarted {
 		sectionHeading = line[:splitPosition]
