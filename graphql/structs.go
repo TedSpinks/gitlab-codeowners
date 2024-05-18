@@ -1,6 +1,6 @@
-package gitlab
+package graphql
 
-type GraphQlServer struct {
+type Server struct {
 	GraphQlUrl  string // HTTPS URL for your GitLab instance's GraphQL API.
 	GitlabToken string // GitLab token for connecting to the GraphQL API (scope=read_api, role=Developer)
 	Timeout     int    // Timeout for GraphQL requests, in seconds

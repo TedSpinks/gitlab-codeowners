@@ -1,0 +1,40 @@
+# Query direct individual members (users) of a prject
+{
+  project(fullPath: "gitlab-org/gitlab-docs") {
+    projectMembers(relations: DIRECT) {
+      pageInfo {
+        endCursor
+        startCursor
+        hasNextPage
+      }
+      nodes {
+        id
+        user {
+          id
+          username
+          publicEmail
+        }
+      }
+    }
+  }
+}
+# Query invited group members (users) of a prject
+{
+  project(fullPath: "gitlab-org/gitlab-docs") {
+    projectMembers(relations: INVITED_GROUPS) {
+      pageInfo {
+        endCursor
+        startCursor
+        hasNextPage
+      }
+      nodes {
+        id
+        user {
+          id
+          username
+          publicEmail
+        }
+      }
+    }
+  }
+}

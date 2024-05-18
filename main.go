@@ -9,13 +9,15 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"gitlab.com/tedspinks/gitlab-codeowners/analysis"
-	"gitlab.com/tedspinks/gitlab-codeowners/gitlab"
+	"gitlab.com/tedspinks/gitlab-codeowners/graphql"
+	"gitlab.com/tedspinks/gitlab-codeowners/rest"
 )
 
 type envVarArgs struct {
 	ProjectPath       string `env:"CI_PROJECT_PATH,notEmpty"`
 	Branch            string `env:"CI_COMMIT_REF_NAME,notEmpty"`
-	GitlabQraphqlUrl  string `env:"CI_API_GRAPHQL_URL,notEmpty"`
+	GitlabGraphqlUrl  string `env:"CI_API_GRAPHQL_URL,notEmpty"`
+	GitlabRestUrl     string `env:"CI_API_V4_URL,notEmpty"`
 	GitlabToken       string `env:"GITLAB_TOKEN,notEmpty"`
 	GitlabTimeoutSecs int    `env:"GITLAB_TIMEOUT_SECS" envDefault:"30"`
 	Debug             bool   `env:"DEBUG" envDefault:"false"`
@@ -33,24 +35,36 @@ func main() {
 	// Setup logging
 	setLogLevel(eVars.Debug)
 	// Setup GitLab connection
-	server := gitlab.GraphQlServer{
-		GraphQlUrl:  eVars.GitlabQraphqlUrl,
+	graphqlServer := graphql.Server{
+		GraphQlUrl:  eVars.GitlabGraphqlUrl,
 		GitlabToken: eVars.GitlabToken,
 		Timeout:     eVars.GitlabTimeoutSecs,
 	}
+	restServer := rest.Server{
+		RestUrl:     eVars.GitlabRestUrl,
+		GitlabToken: eVars.GitlabToken,
+		Timeout:     eVars.GitlabTimeoutSecs,
+	}
+	// Test getting projects
+	proj, err := restServer.GetProjectById(1794617)
+	fmt.Println("proj: ", proj)
+	fmt.Println("err: ", err)
+	proj, err = restServer.GetProjectByPath("gitlab-org/gitlab-docs")
+	fmt.Println("proj: ", proj)
+	fmt.Println("err: ", err)
 	// Check syntax
-	server.CheckCodeownersSyntax(analysis.Co.CodeownersFilePath, eVars.ProjectPath, eVars.Branch)
+	graphqlServer.CheckCodeownersSyntax(analysis.Co.CodeownersFilePath, eVars.ProjectPath, eVars.Branch)
 	// Analyze codeowners file structure
 	analysis.Co.Analyze()
 	fmt.Println("All users and/or groups: ", analysis.Co.UserAndGroupPatterns)
 	// Check owner users and groups
-	ugLeftovers, err := checkUsersAndGroups(server, analysis.Co.UserAndGroupPatterns)
+	ugLeftovers, err := checkUsersAndGroups(graphqlServer, analysis.Co.UserAndGroupPatterns)
 	if err != nil {
 		panic("Error(s) occured while checking users and groups: " + err.Error())
 	}
 	fmt.Println("Cannot find these users and/or groups: ", ugLeftovers)
 	// Check owner emails
-	emailleftovers, err := checkEmails(server, analysis.Co.EmailPatterns)
+	emailleftovers, err := checkEmails(graphqlServer, analysis.Co.EmailPatterns)
 	if err != nil {
 		panic("Error(s) occured while checking emails: " + err.Error())
 	}

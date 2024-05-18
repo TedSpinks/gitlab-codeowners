@@ -1,4 +1,4 @@
-package gitlab
+package graphql
 
 import (
 	"bytes"
@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"net/http"
+	neturl "net/url"
 	"slices"
 	"strings"
 	"time"
@@ -16,7 +18,7 @@ import (
 // Search in GitLab for the specified list of potential usernames. Return a list of all of the
 // usernames that were found as valid users in GitLab.
 // Search documentation: https://docs.gitlab.com/ee/api/graphql/users_example.html
-func (server GraphQlServer) CheckForUsers(usernameList []string) (usernamesFound []string, err error) {
+func (server Server) CheckForUsers(usernameList []string) (usernamesFound []string, err error) {
 	// Create the GraphQL query string
 	usernameListString := ""
 	for i := 0; i < len(usernameList); i++ {
@@ -60,7 +62,7 @@ func (server GraphQlServer) CheckForUsers(usernameList []string) (usernamesFound
 // Otherwise, the seach results will be error-free, but will only contain emails of users
 // who have enabled a "Public email" in their GitLab user settings.
 // Search documentation: https://docs.gitlab.com/ee/api/graphql/reference/#queryusers
-func (server GraphQlServer) CheckForUsersByEmail(emailList []string) (emailsFound []string, err error) {
+func (server Server) CheckForUsersByEmail(emailList []string) (emailsFound []string, err error) {
 	// Query GitLab for each email, individually
 	for _, email := range emailList {
 		// Only do the search if the email wasn't already found
@@ -98,7 +100,7 @@ func (server GraphQlServer) CheckForUsersByEmail(emailList []string) (emailsFoun
 // Search in GitLab for the specified list of Groups. Return a list of all of the Groups that
 // were found in GitLab. Will only return groups to which the input GITLAB_TOKEN has access.
 // GitLab GraphQL Documentation: https://docs.gitlab.com/ee/api/graphql/reference/#querygroup
-func (server GraphQlServer) CheckForGroups(groupNameList []string) (groupsFound []string, err error) {
+func (server Server) CheckForGroups(groupNameList []string) (groupsFound []string, err error) {
 	for _, groupName := range groupNameList {
 		query := `{ group(fullPath: "` + groupName + `") { id name path fullName fullPath visibility }}`
 		_, jsonResponse, err := server.RunGraphQlQuery(query)
@@ -120,7 +122,7 @@ func (server GraphQlServer) CheckForGroups(groupNameList []string) (groupsFound 
 }
 
 // Documentation: https://docs.gitlab.com/ee/api/graphql/reference/#repositoryvalidatecodeownerfile
-func (server GraphQlServer) CheckCodeownersSyntax(codeownersPath string, projectPath string, branch string) (err error) {
+func (server Server) CheckCodeownersSyntax(codeownersPath string, projectPath string, branch string) (err error) {
 	// GraphQL search doesn't understand relative paths
 	codeownersPath = strings.TrimPrefix(codeownersPath, "./")
 	query := `query { project(fullPath: "` + projectPath + `") { repository { validateCodeownerFile(ref: "` + branch +
@@ -151,7 +153,8 @@ func (server GraphQlServer) CheckCodeownersSyntax(codeownersPath string, project
 
 // Run the specified query string against the GitLab server's GraphQL API. Returns the API's response as
 // a raw (JSON) byte slice, so that the calling function can decode it to its expected type.
-func (server GraphQlServer) RunGraphQlQuery(query string) (statusCode int, responseBody []byte, err error) {
+func (server Server) RunGraphQlQuery(query string) (statusCode int, responseBody []byte, err error) {
+	validateUrlWithPath(server.GraphQlUrl)
 	client := &http.Client{
 		Timeout: time.Second * time.Duration(server.Timeout),
 	}
@@ -218,6 +221,20 @@ func getGraphQlErrors(jsonResponse []byte) (err error) {
 		err = errors.Join(errorsToJoin...)
 	}
 	return err
+}
+
+// Exit the program if the provided URL is not valid
+func validateUrlWithPath(url string) {
+	u, err := neturl.Parse(url)
+	if err != nil {
+		log.Fatalf("cannot parse URL '%v':", url)
+	}
+	if u.Scheme == "" || u.Host == "" {
+		log.Fatalf("invalid URL '%v':", url)
+	}
+	if u.Path == "" {
+		log.Fatalf("URL does not contain a path: '%v'", url)
+	}
 }
 
 // Replace consecutive occurences of whitespace characters with a single space
