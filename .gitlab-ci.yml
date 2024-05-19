@@ -12,6 +12,15 @@ compile:
   artifacts:
     paths:
       - gitlab-codeowners
+    # Make this job optional for manual pipeline runs from the web UI
+    - if: $CI_PIPELINE_SOURCE == "web"
+      when: manual
+      allow_failure: true
+    # Otherwise, run this job whenever the Dockerfile or *.go files in main change
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - Dockerfile
+        - "**/*.go"
 
 build-image:
   stage: build
@@ -39,7 +48,9 @@ build-image:
 
 simple-test:
   stage: test
-  image: alpine:latest
+  image: registry.gitlab.com/tedspinks/gitlab-codeowners:latest
+  variables:
+    DEBUG: "false"
   script:
     - pwd
     - whoami
