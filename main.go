@@ -29,20 +29,18 @@ func main() {
 	// Get args from env vars
 	eVars := envVarArgs{}
 	getEnvVerArgs(&eVars)
-	// Setup logging
+	// Prep
 	setLogLevel(eVars.Debug)
-	// Setup GitLab API connections
 	graphqlServer, restServer := setupGitlabConnections(eVars)
+	hasFailures := false
 	// Make sure codeowners syntax is valid before trying to analyze it
 	checkSyntax(graphqlServer, analysis.Co.CodeownersFilePath, eVars.ProjectPath, eVars.Branch)
 	// Analyze codeowners file structure
 	analysis.Co.Analyze()
-	// Init tracking var
-	hasFailures := false
-	// Check owners
 	if !checkAndPrintResults(nil, "Malformed users and groups check", analysis.Co.IgnoredPatterns, "Users or groups that do not start with '@':") {
 		hasFailures = true
 	}
+	// Check owners
 	ugList := analysis.Co.UserAndGroupPatterns
 	eList := analysis.Co.EmailPatterns
 	userAndGroupLeftovers, emailLeftovers, err := checkOwners(graphqlServer, restServer, eVars.ProjectPath, ugList, eList)
@@ -57,6 +55,7 @@ func main() {
 	if !checkAndPrintResults(err, "File pattern check", badFilePatterns, "Unable to find:") {
 		hasFailures = true
 	}
+	// Exit
 	if hasFailures {
 		fmt.Printf("\n")
 		log.Fatalln("See failures noted above.")
@@ -98,8 +97,8 @@ func setupGitlabConnections(eVars envVarArgs) (graphql.Server, rest.Server) {
 	return graphqlServer, restServer
 }
 
-// Returns true if the results of a check indicate a pass. Returns false for failure(s). Prints the failure details
-// to the console for the user to read.
+// Returns true if the results of a check indicate a pass (no error and leftovers is empty).
+// Returns false for failure(s). Prints the failure details to the console for the user to read.
 func checkAndPrintResults(err error, checkName string, leftovers []string, leftoverMsg string) (passed bool) {
 	passed = (len(leftovers) == 0 && err == nil)
 	status := "PASSED"
