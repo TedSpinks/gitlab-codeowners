@@ -23,7 +23,6 @@ type envVarArgs struct {
 	GitlabToken       string `env:"GITLAB_TOKEN,notEmpty"`
 	GitlabTimeoutSecs int    `env:"GITLAB_TIMEOUT_SECS" envDefault:"30"`
 	Debug             bool   `env:"DEBUG" envDefault:"false"`
-	FailNonUserGroups bool   `env:"FAIL_NON_USERS_GROUPS" envDefault:"false"`
 }
 
 func main() {
@@ -41,18 +40,21 @@ func main() {
 	// Init tracking var
 	hasFailures := false
 	// Check owners
+	if !checkAndPrintResults(nil, "Malformed users and groups check", analysis.Co.IgnoredPatterns, "Users or groups that do not start with '@':") {
+		hasFailures = true
+	}
 	ugList := analysis.Co.UserAndGroupPatterns
 	eList := analysis.Co.EmailPatterns
 	userAndGroupLeftovers, emailLeftovers, err := checkOwners(graphqlServer, restServer, eVars.ProjectPath, ugList, eList)
-	if !checkAndPrintResults(err, "Direct user and group membership check", userAndGroupLeftovers) {
+	if !checkAndPrintResults(err, "Direct user and group membership check", userAndGroupLeftovers, "Unable to find:") {
 		hasFailures = true
 	}
-	if !checkAndPrintResults(err, "Direct user email membership check", emailLeftovers) {
+	if !checkAndPrintResults(err, "Direct user email membership check", emailLeftovers, "Unable to find:") {
 		hasFailures = true
 	}
 	// Check file patterns
 	badFilePatterns, err := checkFilePatterns(analysis.Co.FilePatterns)
-	if !checkAndPrintResults(err, "File pattern check", badFilePatterns) {
+	if !checkAndPrintResults(err, "File pattern check", badFilePatterns, "Unable to find:") {
 		hasFailures = true
 	}
 	if hasFailures {
@@ -76,7 +78,7 @@ func checkSyntax(checker syntaxChecker, coFilePath string, projectPath string, b
 	err := checker.CheckCodeownersSyntax(coFilePath, projectPath, branch)
 	if err != nil {
 		fmt.Println("\nSyntax check of CODEOWNERS: FAILED")
-		log.Fatalf(err.Error()) // Stop the program, no sense in trying to analyze a broken file
+		log.Fatalf(err.Error())
 	}
 	fmt.Printf("\nSyntax check of '%v': PASSED\n", analysis.Co.CodeownersFilePath)
 }
@@ -98,7 +100,7 @@ func setupGitlabConnections(eVars envVarArgs) (graphql.Server, rest.Server) {
 
 // Returns true if the results of a check indicate a pass. Returns false for failure(s). Prints the failure details
 // to the console for the user to read.
-func checkAndPrintResults(err error, checkName string, leftovers []string) (passed bool) {
+func checkAndPrintResults(err error, checkName string, leftovers []string, leftoverMsg string) (passed bool) {
 	passed = (len(leftovers) == 0 && err == nil)
 	status := "PASSED"
 	if !passed {
@@ -109,7 +111,7 @@ func checkAndPrintResults(err error, checkName string, leftovers []string) (pass
 	if err != nil {
 		fmt.Println(indent + "error: " + err.Error())
 	} else if !passed {
-		fmt.Println(indent + "Unable to find:")
+		fmt.Println(indent + leftoverMsg)
 		for _, leftover := range leftovers {
 			fmt.Println(indent + indent + leftover)
 		}
