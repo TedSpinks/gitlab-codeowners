@@ -6,11 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	neturl "net/url"
-	"slices"
 	"strings"
 	"time"
 )
@@ -68,112 +66,6 @@ func (server Server) GetDirectUserMembers(projectFullPath string, userSource str
 	return
 }
 
-// Search in GitLab for the specified list of potential usernames. Return a list of all of the
-// usernames that were found as valid users in GitLab.
-// Search documentation: https://docs.gitlab.com/ee/api/graphql/users_example.html
-func (server Server) CheckForUsers(usernameList []string) (usernamesFound []string, err error) {
-	// Create the GraphQL query string
-	usernameListString := ""
-	for i := 0; i < len(usernameList); i++ {
-		usernameListString += `"` + usernameList[i] + `"`
-		if i+1 < len(usernameList) {
-			usernameListString += ","
-		}
-	}
-	query := `query { users(usernames: [` + usernameListString + `]) { pageInfo { endCursor startCursor hasNextPage } nodes { id username publicEmail emails { nodes { email } }}}}`
-	// Searches for lots of users could result in multiple pages of results (100/page), so
-	// repeat the GraphQL query until all the pages have been retrieved
-	for {
-		_, jsonResponse, err := server.RunGraphQlQuery(query)
-		if err != nil {
-			return usernamesFound, err
-		}
-		var queryResults UserQueryResponse
-		err = json.Unmarshal(jsonResponse, &queryResults)
-		if err != nil {
-			return usernamesFound, err
-		}
-		for _, user := range queryResults.Data.Users.Nodes {
-			usernamesFound = append(usernamesFound, user.Username)
-		}
-		// Check if the GraphQL results still have another page to process
-		if queryResults.Data.Users.PageInfo.HasNextPage {
-			// Update the query to give the next page of results
-			pageEndCursor := queryResults.Data.Users.PageInfo.EndCursor
-			query = `query { users(usernames: [` + usernameListString + `] after:"` + pageEndCursor + `") { pageInfo { endCursor startCursor hasNextPage } nodes { id username publicEmail emails { nodes { email } }}}}`
-		} else {
-			// Break if there are no more pages left
-			break
-		}
-	}
-	return usernamesFound, err
-}
-
-// Search in GitLab for the specified list of email addresses. Return a list of all of the
-// email addresses that were found as valid users in GitLab.
-// IMPORTANT: you must use an Admin GitLab token in order for the search to find users' emails!
-// Otherwise, the seach results will be error-free, but will only contain emails of users
-// who have enabled a "Public email" in their GitLab user settings.
-// Search documentation: https://docs.gitlab.com/ee/api/graphql/reference/#queryusers
-func (server Server) CheckForUsersByEmail(emailList []string) (emailsFound []string, err error) {
-	// Query GitLab for each email, individually
-	for _, email := range emailList {
-		// Only do the search if the email wasn't already found
-		if !slices.Contains(emailsFound, email) {
-			query := `query { users(search: "` + email + `") { pageInfo { endCursor startCursor hasNextPage } nodes { id username publicEmail emails { nodes {email} } }}}`
-			_, jsonResponse, err := server.RunGraphQlQuery(query)
-			if err != nil {
-				wrappedErr := fmt.Errorf("CheckForGitLabUsersByEmail() failed on email '%v': %w", email, err)
-				return emailsFound, wrappedErr
-			}
-			var queryResults UserQueryResponse
-			err = json.Unmarshal(jsonResponse, &queryResults)
-			if err != nil {
-				wrappedErr := fmt.Errorf("CheckForGitLabUsersByEmail() could not decode JSON response from search for email '%v': %w", email, err)
-				return emailsFound, wrappedErr
-			}
-			for _, user := range queryResults.Data.Users.Nodes {
-				if (user.PublicEmail != "") && (!slices.Contains(emailsFound, user.PublicEmail)) {
-					emailsFound = append(emailsFound, user.PublicEmail)
-				}
-				for _, privateEmail := range user.Emails.Nodes {
-					privateEmailAddress := privateEmail.Email
-					if !slices.Contains(emailsFound, privateEmailAddress) {
-						// Add all emails to the found list, not just the one we're looking for
-						// This could prevent having to do some GraphQL searches later on in the emailList
-						emailsFound = append(emailsFound, privateEmailAddress)
-					}
-				}
-			}
-		}
-	}
-	return emailsFound, err
-}
-
-// Search in GitLab for the specified list of Groups. Return a list of all of the Groups that
-// were found in GitLab. Will only return groups to which the input GITLAB_TOKEN has access.
-// GitLab GraphQL Documentation: https://docs.gitlab.com/ee/api/graphql/reference/#querygroup
-func (server Server) CheckForGroups(groupNameList []string) (groupsFound []string, err error) {
-	for _, groupName := range groupNameList {
-		query := `{ group(fullPath: "` + groupName + `") { id name path fullName fullPath visibility }}`
-		_, jsonResponse, err := server.RunGraphQlQuery(query)
-		if err != nil {
-			wrappedErr := fmt.Errorf("CheckForGroups() failed on group '%v': %w", groupName, err)
-			return groupsFound, wrappedErr
-		}
-		var queryResults GroupQueryResponse
-		err = json.Unmarshal(jsonResponse, &queryResults)
-		if err != nil {
-			wrappedErr := fmt.Errorf("CheckForGroups() could not decode JSON response from search for group '%v': %w", groupName, err)
-			return groupsFound, wrappedErr
-		}
-		if queryResults.Data.Group.Path != "" {
-			groupsFound = append(groupsFound, queryResults.Data.Group.Path)
-		}
-	}
-	return groupsFound, err
-}
-
 // Documentation: https://docs.gitlab.com/ee/api/graphql/reference/#repositoryvalidatecodeownerfile
 func (server Server) CheckCodeownersSyntax(codeownersPath string, projectPath string, branch string) (err error) {
 	// GraphQL search doesn't understand relative paths
@@ -207,7 +99,10 @@ func (server Server) CheckCodeownersSyntax(codeownersPath string, projectPath st
 // Run the specified query string against the GitLab server's GraphQL API. Returns the API's response as
 // a raw (JSON) byte slice, so that the calling function can decode it to its expected type.
 func (server Server) RunGraphQlQuery(query string) (statusCode int, responseBody []byte, err error) {
-	validateUrlWithPath(server.GraphQlUrl)
+	err = validateUrlWithPath(server.GraphQlUrl)
+	if err != nil {
+		return
+	}
 	client := &http.Client{
 		Timeout: time.Second * time.Duration(server.Timeout),
 	}
@@ -218,14 +113,15 @@ func (server Server) RunGraphQlQuery(query string) (statusCode int, responseBody
 	postData := qraphqlQuery{Query: singleLineQuery}
 	postJson, err := json.Marshal(postData)
 	if err != nil {
-		return statusCode, responseBody, fmt.Errorf("error trying to encode GraphQL query '%v' as JSON: '%w'", query, err)
+		err = fmt.Errorf("error trying to encode GraphQL query '%v' as JSON: '%w'", query, err)
+		return
 	}
 	// Setup the request
 	req, err := http.NewRequest("POST", server.GraphQlUrl, bytes.NewBuffer(postJson))
 	// req, err := http.NewRequest("POST", server.GraphQlUrl, strings.NewReader(string(postJson)))  // this also works
 	if err != nil {
-		wrappedErr := fmt.Errorf("error trying to create HTTP request to server '%v' with payload '%v': '%w'", server.GraphQlUrl, query, err)
-		return statusCode, responseBody, wrappedErr
+		err = fmt.Errorf("error trying to create HTTP request to server '%v' with payload '%v': '%w'", server.GraphQlUrl, query, err)
+		return
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer "+server.GitlabToken)
@@ -233,28 +129,27 @@ func (server Server) RunGraphQlQuery(query string) (statusCode int, responseBody
 	slog.Debug("Making HTTP request:", slog.Any("httpRequest", req))
 	res, err := client.Do(req)
 	if err != nil {
-		wrappedErr := fmt.Errorf("error making HTTP request to server '%v' with payload '%v': '%w'", server.GraphQlUrl, query, err)
-		return statusCode, responseBody, wrappedErr
+		err = fmt.Errorf("error making HTTP request to server '%v' with payload '%v': '%w'", server.GraphQlUrl, query, err)
+		return
 	}
 	// Return the results
 	statusCode = res.StatusCode
 	defer res.Body.Close()
 	responseBody, err = io.ReadAll(res.Body)
 	if err != nil {
-		wrappedErr := fmt.Errorf("error reading response from server '%v' with GraphQL query '%v': '%w'", server.GraphQlUrl, query, err)
-		return statusCode, responseBody, wrappedErr
+		err = fmt.Errorf("error reading response from server '%v' with GraphQL query '%v': '%w'", server.GraphQlUrl, query, err)
+		return
 	}
 	slog.Debug("HTTP response received:", slog.Any(fmt.Sprint(res.StatusCode), responseBody))
 	if res.StatusCode != http.StatusOK {
 		err = fmt.Errorf("graphQL request to server '%v' with query '%v' returned status %d", server.GraphQlUrl, query, res.StatusCode)
-		return statusCode, responseBody, err
 	}
 	err = getGraphQlErrors(responseBody)
 	if err != nil {
-		wrappedErr := fmt.Errorf("graphQL query '%v' received status code %d and errors: %w", query, res.StatusCode, err)
-		return statusCode, responseBody, wrappedErr
+		err = fmt.Errorf("graphQL query '%v' received status code %d and errors: %w", query, res.StatusCode, err)
+		return
 	}
-	return statusCode, responseBody, err
+	return
 }
 
 // Check the JSON byte slice from the GraphQL response for errors, and return them as an error.
@@ -276,18 +171,22 @@ func getGraphQlErrors(jsonResponse []byte) (err error) {
 	return err
 }
 
-// Exit the program if the provided URL is not valid
-func validateUrlWithPath(url string) {
+// Return an error if the provided URL is not valid
+func validateUrlWithPath(url string) (err error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
-		log.Fatalf("cannot parse URL '%v':", url)
+		err = fmt.Errorf("cannot parse URL '%v': %w", url, err)
+		return
 	}
 	if u.Scheme == "" || u.Host == "" {
-		log.Fatalf("invalid URL '%v':", url)
+		err = fmt.Errorf("invalid URL '%v'", url)
+		return
 	}
 	if u.Path == "" {
-		log.Fatalf("URL does not contain a path: '%v'", url)
+		err = fmt.Errorf("URL does not contain a path '%v'", url)
+		return
 	}
+	return
 }
 
 // Replace consecutive occurences of whitespace characters with a single space

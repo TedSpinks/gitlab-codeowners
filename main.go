@@ -8,7 +8,7 @@ import (
 	"slices"
 	"strings"
 
-	filepath "github.com/bmatcuk/doublestar" // because Glob() in "path/filepath" doesn't support "**"
+	"github.com/bmatcuk/doublestar" // because Glob() in "path/filepath" doesn't support "**"
 	"github.com/caarlos0/env/v11"
 	"gitlab.com/tedspinks/gitlab-codeowners/analysis"
 	"gitlab.com/tedspinks/gitlab-codeowners/graphql"
@@ -85,6 +85,7 @@ func main() {
 	handleFailures(failedChecks)
 }
 
+// If there were any failures, then print them out and exit with an error code
 func handleFailures(failedChecks []string) {
 	if len(failedChecks) > 0 {
 		for _, failure := range failedChecks {
@@ -94,6 +95,7 @@ func handleFailures(failedChecks []string) {
 	}
 }
 
+// Verify that each file pattern matches at least one file. Return any patterns that do not have any matches.
 func checkFilePatterns(filePatterns []string) (badPatterns []string, err error) {
 	for _, pattern := range filePatterns {
 		slog.Debug("checkFilePatterns(): Checking file pattern '" + pattern + "'")
@@ -102,7 +104,7 @@ func checkFilePatterns(filePatterns []string) (badPatterns []string, err error) 
 		}
 		globExpression := translateCoToGlob(pattern)
 		slog.Debug("checkFilePatterns(): translated to glob expression '" + globExpression + "'")
-		matches, matchErr := filepath.Glob(globExpression)
+		matches, matchErr := doublestar.Glob(globExpression)
 		if matchErr != nil {
 			err = fmt.Errorf("checkFilePatterns() error while evaluating glob '%v': %w", pattern, matchErr)
 			return
@@ -115,7 +117,7 @@ func checkFilePatterns(filePatterns []string) (badPatterns []string, err error) 
 	return
 }
 
-// Translate a CODEOWNERS file pattern into a standard glob expression
+// Translate a CODEOWNERS file pattern into a standard glob expression.
 func translateCoToGlob(pattern string) (translatedPattern string) {
 	translatedPattern = pattern
 	if strings.HasPrefix(pattern, "/") {
@@ -180,43 +182,6 @@ func checkOwners(uChecker userChecker, gChecker groupChecker, projectFullPath st
 	return
 }
 
-func checkEmails(checker emailChecker, emailList []string) (leftovers []string, err error) {
-	leftovers = make([]string, len(emailList))
-	copy(leftovers, emailList)
-
-	// Check for emails and remove any that are found from the list to check
-	emailsFound, err := checker.CheckForUsersByEmail(leftovers)
-	if err != nil {
-		err = fmt.Errorf("checkEmails() encountered an error while checking emails: %g", err)
-		return
-	}
-	leftovers = filterSlice(leftovers, emailsFound)
-	return
-}
-
-func checkUsersAndGroups(checker groupUserChecker, combinedList []string) (leftovers []string, err error) {
-	leftovers = make([]string, len(combinedList))
-	copy(leftovers, combinedList)
-
-	// Check for groups and remove any that are found from the list to check
-	groupsFound, err := checker.CheckForGroups(leftovers)
-	if err != nil {
-		err = fmt.Errorf("checkUsersAndGroups() encountered an error while checking groups: %g", err)
-		return
-	}
-	leftovers = filterSlice(leftovers, groupsFound)
-
-	// Check for users and remove any that are found from the list to check
-	usersFound, err := checker.CheckForUsers(leftovers)
-	if err != nil {
-		err = fmt.Errorf("checkUsersAndGroups() encountered an error while checking users: %g", err)
-		return
-	}
-	leftovers = filterSlice(leftovers, usersFound)
-
-	return
-}
-
 // Take the "original" slice and remove all the elements that intersect with the "filterAgainst"
 // slice.
 func filterSlice(original []string, filterAgainst []string) []string {
@@ -233,7 +198,7 @@ func filterSlice(original []string, filterAgainst []string) []string {
 	return original
 }
 
-// Remove the element at index "i" from a slice - without creating a new slice. This is much better for
+// Remove the element at index "i" from a slice, without creating a new slice. This is much better for
 // performance, but does not preserve the slice's original order. https://stackoverflow.com/a/37335777
 func remove(s []string, i int) []string {
 	s[i] = s[len(s)-1]

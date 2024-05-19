@@ -19,6 +19,8 @@ func init() {
 	}
 }
 
+// Check GitLab's 3 supported locations for CODEOWNERS files, in order of precedence, and save the
+// path of the first one found. https://docs.gitlab.com/ee/user/project/codeowners/#codeowners-file
 func (co *CodeownersFileAnatomy) determineCodeownersPath() error {
 	supportedLocations := [...]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitlab/CODEOWNERS"}
 	for _, location := range supportedLocations {
@@ -35,9 +37,10 @@ func (co *CodeownersFileAnatomy) determineCodeownersPath() error {
 	return fmt.Errorf("unable to find a CODEOWNERS file at GitLab's 3 supported paths: %v", supportedLocations)
 }
 
-// Return whether or not the specified file can be found within the file system. Note that Linux has
-// a case sensitive file system, but Mac (surprisingly) and Windows do not. To test this, try creating
-// 2 files with the same spelling, but different cases. A case sensitive file system will allow this.
+// Return whether or not the specified file can be found within the file system. Note that Linux has a case
+// sensitive file system, but Mac (surprisingly) and Windows do not. To test whether your file system is case
+// sensitive, try creating 2 files with the same spelling, but different cases. A case sensitive file system
+// WILL allow this.
 func fileExists(filePath string) (bool, error) {
 	stat, err := os.Stat(filePath)
 	if err == nil {
@@ -56,7 +59,8 @@ func (co *CodeownersFileAnatomy) Analyze() {
 	if len(co.CodeownersFileLines) == 0 {
 		co.readCodeownersFile()
 	}
-	// Define sets (string map of bool) to record unique patterns with no dupes
+	// Define sets (string map of bool) to record unique patterns with no dupes, since we only
+	// want to analyze a pattern once
 	sectionHeadingsMap := map[string]bool{}
 	filePatternsMap := map[string]bool{}
 	userAndGroupPatternsMap := map[string]bool{}
@@ -84,7 +88,7 @@ func (co *CodeownersFileAnatomy) Analyze() {
 			ignoredPatternsMap[i] = true
 		}
 	}
-	// Write unique patterns to co object
+	// Save the unique patterns in the co object
 	co.Analyzed = true
 	co.SectionHeadings = setMapToSlice(sectionHeadingsMap)
 	co.FilePatterns = setMapToSlice(filePatternsMap)

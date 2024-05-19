@@ -4,12 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	neturl "net/url"
-
-	// "slices"
 	"strings"
 	"time"
 )
@@ -25,8 +22,6 @@ func (server Server) GetDirectGroupMembers(projectFullPath string) (groups []str
 	if project == nil {
 		return
 	}
-	fmt.Println(project)
-	fmt.Println(project.SharedWithGroups)
 	for _, group := range project.SharedWithGroups {
 		groups = append(groups, group.GroupFullPath)
 	}
@@ -79,18 +74,28 @@ func (server Server) GetProjectById(id int) (project *Project, err error) {
 
 // Make the specified request against the GitLab server's REST API. Returns the API's response as
 // a raw (JSON) byte slice, so that the calling function can decode it to its expected type.
-func (server Server) RestRequest(path string, method string, jsonPayload string) (statusCode int, jsonResponse []byte, err error) {
+func (server Server) RestRequest(path string, method string, jsonPayload string) (
+	statusCode int,
+	jsonResponse []byte,
+	err error,
+) {
 	endpointUrl := strings.TrimSuffix(server.RestUrl, "/") + "/" + strings.TrimPrefix(path, "/")
-	validateUrlWithPath(endpointUrl)
-	validateRestMethod(method)
+	err = validateUrlWithPath(endpointUrl)
+	if err != nil {
+		return
+	}
+	err = validateRestMethod(method)
+	if err != nil {
+		return
+	}
 	// Setup the request
 	client := &http.Client{
 		Timeout: time.Second * time.Duration(server.Timeout),
 	}
 	req, err := http.NewRequest(method, endpointUrl, strings.NewReader(jsonPayload))
 	if err != nil {
-		wrappedErr := fmt.Errorf("error trying to create REST request to '%v' with payload '%v': '%w'", endpointUrl, jsonPayload, err)
-		return statusCode, jsonResponse, wrappedErr
+		err = fmt.Errorf("error trying to create REST request to '%v' with payload '%v': '%w'", endpointUrl, jsonPayload, err)
+		return
 	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer "+server.GitlabToken)
@@ -98,46 +103,50 @@ func (server Server) RestRequest(path string, method string, jsonPayload string)
 	slog.Debug("Making HTTP request:", slog.Any("httpRequest", req))
 	res, err := client.Do(req)
 	if err != nil {
-		wrappedErr := fmt.Errorf("error making REST request to '%v' with payload '%v': '%w'", endpointUrl, jsonPayload, err)
-		return statusCode, jsonResponse, wrappedErr
+		err = fmt.Errorf("error making REST request to '%v' with payload '%v': '%w'", endpointUrl, jsonPayload, err)
+		return
 	}
 	// Return the results
 	statusCode = res.StatusCode
 	defer res.Body.Close()
 	jsonResponse, err = io.ReadAll(res.Body)
 	if err != nil {
-		wrappedErr := fmt.Errorf("error reading response from request '%v' with payload '%v': '%w'", endpointUrl, jsonPayload, err)
-		return statusCode, jsonResponse, wrappedErr
+		err = fmt.Errorf("error reading response from request '%v' with payload '%v': '%w'", endpointUrl, jsonPayload, err)
+		return
 	}
 	slog.Debug("HTTP response received:", slog.Any(fmt.Sprint(res.StatusCode), jsonResponse))
 	if res.StatusCode != http.StatusOK {
 		err = fmt.Errorf("request '%v' with payload '%v' returned status %d and response '%v'", endpointUrl, jsonPayload, res.StatusCode, string(jsonResponse))
-		return statusCode, jsonResponse, err
+		return
 	}
-	return statusCode, jsonResponse, err
+	return
 }
 
-// Exit the program if the provided URL is not valid
-func validateUrlWithPath(url string) {
+// Return an error if the provided URL is not valid
+func validateUrlWithPath(url string) (err error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
-		log.Fatalf("cannot parse URL '%v':", url)
+		err = fmt.Errorf("cannot parse URL '%v': %w", url, err)
+		return
 	}
 	if u.Scheme == "" || u.Host == "" {
-		log.Fatalf("invalid URL '%v':", url)
+		err = fmt.Errorf("invalid URL '%v'", url)
+		return
 	}
 	if u.Path == "" {
-		log.Fatalf("URL does not contain a path: '%v'", url)
+		err = fmt.Errorf("URL does not contain a path '%v'", url)
+		return
 	}
+	return
 }
 
-// Exit the program if the provided REST method is not valid
-func validateRestMethod(method string) {
+// Return an error if the provided REST method is not valid
+func validateRestMethod(method string) (err error) {
 	switch method {
 	case "GET", "PUT", "POST", "DELETE", "PATCH":
-		// valid
+		return // valid
 	default:
-		// developer error
-		panic("invalid REST method, should be one of GET, PUT, POST, DELETE, PATCH: '" + method + "'")
+		err = fmt.Errorf("invalid REST method, should be one of GET, PUT, POST, DELETE, PATCH: '%v'", method)
 	}
+	return
 }

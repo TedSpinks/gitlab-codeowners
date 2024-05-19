@@ -1,7 +1,0 @@
-# Look up a project ID by its full path
-{
-  project(fullPath: "gitlab-org/gitlab-docs") {
-    fullPath
-    id
-  }
-}
