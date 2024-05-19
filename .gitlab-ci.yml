@@ -12,6 +12,7 @@ compile:
   artifacts:
     paths:
       - gitlab-codeowners
+  rules:
     # Make this job optional for manual pipeline runs from the web UI
     - if: $CI_PIPELINE_SOURCE == "web"
       when: manual
