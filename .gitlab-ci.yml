@@ -31,4 +31,6 @@ simple-test:
   stage: test
   image: alpine:latest
   script:
-    - ./gitlab-codeowners
+    - pwd
+    - whoami
+    - /gitlab/gitlab-codeowners
