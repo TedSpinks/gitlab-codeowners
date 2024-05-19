@@ -29,14 +29,60 @@ type envVarArgs struct {
 func main() {
 	// Get args from env vars
 	eVars := envVarArgs{}
+	getEnvVerArgs(&eVars)
+	// Setup logging
+	setLogLevel(eVars.Debug)
+	// Setup GitLab API connections
+	graphqlServer, restServer := setupGitlabConnections(eVars)
+	// Make sure codeowners syntax is valid before trying to analyze it
+	checkSyntax(graphqlServer, analysis.Co.CodeownersFilePath, eVars.ProjectPath, eVars.Branch)
+	// Analyze codeowners file structure
+	analysis.Co.Analyze()
+	// Init tracking var
+	hasFailures := false
+	// Check owners
+	ugList := analysis.Co.UserAndGroupPatterns
+	eList := analysis.Co.EmailPatterns
+	userAndGroupLeftovers, emailLeftovers, err := checkOwners(graphqlServer, restServer, eVars.ProjectPath, ugList, eList)
+	if !checkAndPrintResults(err, "Direct user and group membership check", userAndGroupLeftovers) {
+		hasFailures = true
+	}
+	if !checkAndPrintResults(err, "Direct user email membership check", emailLeftovers) {
+		hasFailures = true
+	}
+	// Check file patterns
+	badFilePatterns, err := checkFilePatterns(analysis.Co.FilePatterns)
+	if !checkAndPrintResults(err, "File pattern check", badFilePatterns) {
+		hasFailures = true
+	}
+	if hasFailures {
+		fmt.Printf("\n")
+		log.Fatalln("See failures noted above.")
+	}
+}
+
+// Read in the program args from environment variables. Stop the program if there are any errors.
+func getEnvVerArgs(eVars *envVarArgs) {
 	opts := env.Options{RequiredIfNoDef: true}
-	err := env.ParseWithOptions(&eVars, opts)
+	err := env.ParseWithOptions(eVars, opts)
 	if err != nil {
 		log.Fatalln("error reading environment variables: " + err.Error())
 	}
-	// Setup logging
-	setLogLevel(eVars.Debug)
-	// Setup GitLab connection
+}
+
+// Check codeowners syntax. Stop the program if there are syntax errors, since there's no sense in trying to
+// analyze a broken file.
+func checkSyntax(checker syntaxChecker, coFilePath string, projectPath string, branch string) {
+	err := checker.CheckCodeownersSyntax(coFilePath, projectPath, branch)
+	if err != nil {
+		fmt.Println("\nSyntax check of CODEOWNERS: FAILED")
+		log.Fatalf(err.Error()) // Stop the program, no sense in trying to analyze a broken file
+	}
+	fmt.Printf("\nSyntax check of '%v': PASSED\n", analysis.Co.CodeownersFilePath)
+}
+
+// Setup GitLab connections - return struct vars with connection info for both of the GitLab API packages
+func setupGitlabConnections(eVars envVarArgs) (graphql.Server, rest.Server) {
 	graphqlServer := graphql.Server{
 		GraphQlUrl:  eVars.GitlabGraphqlUrl,
 		GitlabToken: eVars.GitlabToken,
@@ -47,41 +93,12 @@ func main() {
 		GitlabToken: eVars.GitlabToken,
 		Timeout:     eVars.GitlabTimeoutSecs,
 	}
-	// Check codeowners syntax
-	err = graphqlServer.CheckCodeownersSyntax(analysis.Co.CodeownersFilePath, eVars.ProjectPath, eVars.Branch)
-	if err != nil {
-		fmt.Println("\nSyntax check of CODEOWNERS: FAILED")
-		log.Fatalf(err.Error()) // Stop the program, no sense in trying to analyze a broken file
-	}
-	fmt.Printf("\nSyntax check of '%v': PASSED\n", analysis.Co.CodeownersFilePath)
-	// Analyze codeowners file structure
-	analysis.Co.Analyze()
-	// Init tracking vars
-	hasFailures := false
-	// Check owners
-	ugList := analysis.Co.UserAndGroupPatterns
-	eList := analysis.Co.EmailPatterns
-	userAndGroupLeftovers, emailLeftovers, err := checkOwners(graphqlServer, restServer, eVars.ProjectPath, ugList, eList)
-	if !checkAndPrintResults(err, "Direct user and group membership check", userAndGroupLeftovers, "Unable to find:") {
-		hasFailures = true
-	}
-	if !checkAndPrintResults(err, "Direct user email membership check", emailLeftovers, "Unable to find:") {
-		hasFailures = true
-	}
-	// Check file patterns
-	badFilePatterns, err := checkFilePatterns(analysis.Co.FilePatterns)
-	if !checkAndPrintResults(err, "File pattern check", badFilePatterns, "Unable to find:") {
-		hasFailures = true
-	}
-	if hasFailures {
-		fmt.Printf("\n")
-		log.Fatalln("See failures noted above.")
-	}
+	return graphqlServer, restServer
 }
 
 // Returns true if the results of a check indicate a pass. Returns false for failure(s). Prints the failure details
 // to the console for the user to read.
-func checkAndPrintResults(err error, checkName string, leftovers []string, badPatternMsg string) (passed bool) {
+func checkAndPrintResults(err error, checkName string, leftovers []string) (passed bool) {
 	passed = (len(leftovers) == 0 && err == nil)
 	status := "PASSED"
 	if !passed {
@@ -90,9 +107,9 @@ func checkAndPrintResults(err error, checkName string, leftovers []string, badPa
 	fmt.Println("\n" + checkName + ": " + status)
 	indent := "     "
 	if err != nil {
-		fmt.Println(indent + checkName + " error: " + err.Error())
+		fmt.Println(indent + "error: " + err.Error())
 	} else if !passed {
-		fmt.Println(indent + badPatternMsg)
+		fmt.Println(indent + "Unable to find:")
 		for _, leftover := range leftovers {
 			fmt.Println(indent + indent + leftover)
 		}
