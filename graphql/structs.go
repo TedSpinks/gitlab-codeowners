@@ -6,6 +6,33 @@ type Server struct {
 	Timeout     int    // Timeout for GraphQL requests, in seconds
 }
 
+type ProjectMembersQueryResponse struct {
+	Data struct {
+		Project struct {
+			ProjectMembers struct {
+				PageInfo struct {
+					EndCursor   string `json:"endCursor"`
+					StartCursor string `json:"startCursor"`
+					HasNextPage bool   `json:"hasNextPage"`
+				} `json:"pageInfo"`
+				Nodes []struct {
+					Id   string `json:"id"`
+					User struct {
+						Id          string `json:"id"`
+						Username    string `json:"username"`
+						PublicEmail string `json:"publicEmail"`
+						Emails      struct {
+							Nodes []struct {
+								Email string `json:"email"`
+							} `json:"nodes"`
+						} `json:"emails"`
+					} `json:"user"`
+				} `json:"nodes"`
+			} `json:"projectMembers"`
+		} `json:"project"`
+	} `json:"data"`
+}
+
 type ValidateCodeownersResponse struct {
 	Data struct {
 		Project struct {

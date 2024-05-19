@@ -8,3 +8,11 @@ type groupUserChecker interface {
 type emailChecker interface {
 	CheckForUsersByEmail(emailList []string) (emailsFound []string, err error)
 }
+
+type groupChecker interface {
+	GetDirectGroupMembers(projectFullPath string) (groups []string, err error)
+}
+
+type userChecker interface {
+	GetDirectUserMembers(projectFullPath string, userSource string) (usernamesFound []string, emailsFound []string, err error)
+}

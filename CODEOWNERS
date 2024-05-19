@@ -20,13 +20,13 @@
 # Specify multiple Code Owners separated by spaces or tabs.
 # In the following case the CODEOWNERS file from the root of the repo
 # has 3 Code Owners (@multiple @code @owners):
-CODEOWNERS @multiple @code @owners
+CODEOWNERS @multiple @code @owners gtspinks@hotmail.com ted.spinks@cdw.com
 
 # You can use both usernames or email addresses to match
 # users. Everything else is ignored. For example, this code
 # specifies the `@legal` and a user with email `janedoe@gitlab.com` as the
 # owner for the LICENSE file:
-LICENSE @legal this_does_not_match janedoe@gitlab.com
+LICENSE* @legal this_does_not_match janedoe@gitlab.com
 
 # Use group names to match groups, and nested groups to specify
 # them as owners for a file:
@@ -61,7 +61,7 @@ ee/docs    @docs
 docs       @docs
 
 # Use of default owners for a section. In this case, all files (*) are owned by the dev team except the README.md and data-models which are owned by other teams.
-[Development] @dev-team
+[Development] @ted-test2
 *
 README.md @docs-team
 data-models/ @data-science-team

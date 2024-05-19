@@ -14,26 +14,46 @@ import (
 	"time"
 )
 
+// Return the full path (ex: top-group/sub-group/etc-group) of all the groups that are direct members of the
+// specified project.
+func (server Server) GetDirectGroupMembers(projectFullPath string) (groups []string, err error) {
+	project, err := server.GetProjectByPath(projectFullPath)
+	if err != nil {
+		err = fmt.Errorf("GetDirectGroupMembers(): %w", err)
+		return
+	}
+	if project == nil {
+		return
+	}
+	fmt.Println(project)
+	fmt.Println(project.SharedWithGroups)
+	for _, group := range project.SharedWithGroups {
+		groups = append(groups, group.GroupFullPath)
+	}
+	return
+}
+
 // Look up a project by its full path (ex: my-group/my-subgroup/my-project). If there is no project with the
 // specified path that is visible to the server.GitlabToken identity, then the "project" return will be nil.
-func (server Server) GetProjectByPath(groupPath string) (project *Project, err error) {
-	groupPath = strings.TrimPrefix(groupPath, "/")
+// Note: in order for project to be allowed to be nil, I had to make it a pointer.
+func (server Server) GetProjectByPath(projectFullPath string) (project *Project, err error) {
+	projectFullPath = strings.TrimPrefix(projectFullPath, "/")
 	// A valid group/project path must have at least one slash
-	if !strings.Contains(groupPath, "/") {
-		panic("GetProjectByPath() requires a path in the format of group/project or group/subgroup/project, invalid path: '" + groupPath + "'")
+	if !strings.Contains(projectFullPath, "/") {
+		panic("GetProjectByPath() requires a path in the format of group/project or group/subgroup/project, invalid path: '" + projectFullPath + "'")
 	}
 	// URL-encode the slashes in the group path
-	endpointPath := "/projects/" + strings.Replace(groupPath, "/", "%2F", -1)
+	endpointPath := "/projects/" + strings.Replace(projectFullPath, "/", "%2F", -1)
 	// Make the REST request
 	_, jsonResponse, err := server.RestRequest(endpointPath, "GET", "")
 	if err != nil {
-		err = fmt.Errorf("GetProjectById() failed looking up project path '%v': %w", groupPath, err)
+		err = fmt.Errorf("GetProjectById() failed looking up project path '%v': %w", projectFullPath, err)
 		return nil, err
 	}
 	err = json.Unmarshal(jsonResponse, &project)
 	if err != nil {
 		err = fmt.Errorf("GetProjectById() could not decode JSON response '%v' when looking up project path '%v': %w",
-			string(jsonResponse), groupPath, err)
+			string(jsonResponse), projectFullPath, err)
 		return nil, err
 	}
 	return project, nil
@@ -41,6 +61,7 @@ func (server Server) GetProjectByPath(groupPath string) (project *Project, err e
 
 // Look up a project by its ID. If there is no project with the specified ID that is visible to the
 // server.GitlabToken identity, then the "project" return will be nil.
+// Note: in order for project to be allowed to be nil, I had to make it a pointer.
 func (server Server) GetProjectById(id int) (project *Project, err error) {
 	path := fmt.Sprintf("/projects/%d", id)
 	_, jsonResponse, err := server.RestRequest(path, "GET", "")

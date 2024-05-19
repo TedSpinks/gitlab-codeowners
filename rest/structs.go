@@ -7,13 +7,11 @@ type Server struct {
 }
 
 // JSON documentation:
-//https://docs.gitlab.com/ee/api/projects.html#get-single-project
-
-type Projects []Project
+// https://docs.gitlab.com/ee/api/projects.html#get-single-project
 
 type Project struct {
 	Id                int     `json:"id"`
-	PathWithNamespace string  `json:"string path_with_namespace"`
+	PathWithNamespace string  `json:"path_with_namespace"`
 	SharedWithGroups  []Group `json:"shared_with_groups"`
 }
 

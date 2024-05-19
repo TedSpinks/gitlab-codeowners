@@ -131,8 +131,8 @@ func splitOwnerPatterns(ownerPatterns string) (usersOrGroups []string, emails []
 	return
 }
 
-// Split each CODEOWNERS line into its main parts, with a [section heading] or file pattern on the left,
-// and owner patterns on the right.
+// Split each CODEOWNERS line into its main parts, with a [section heading] or file pattern on the left, and
+// owner patterns on the right.
 func splitCodeownersLine(line string) (sectionHeading string, filePattern string, ownerPatterns string) {
 	line = strings.TrimSpace(line)
 	// Skip any blank/whitespace or comment lines
@@ -140,12 +140,12 @@ func splitCodeownersLine(line string) (sectionHeading string, filePattern string
 		return
 	}
 	splitPosition := 0
-	prevCharIsEscape := false
 	firstCharIsHat := false // hat aka carat
 	sectionHeadingStarted := false
 	sectionHeadingEnded := false
 	// Find the split position within the line
 	for i, c := range line {
+		prevCharIsEscape := false
 		if i > 0 && line[i-1] == '\\' {
 			prevCharIsEscape = true
 		}
@@ -178,11 +178,13 @@ func splitCodeownersLine(line string) (sectionHeading string, filePattern string
 		return
 	}
 	// Split the line and return results
+	leftSide := line[:splitPosition]
+	rightSide := line[splitPosition+1:]
 	if sectionHeadingStarted {
-		sectionHeading = line[:splitPosition]
+		sectionHeading = leftSide
 	} else {
-		filePattern = line[:splitPosition]
+		filePattern = leftSide
 	}
-	ownerPatterns = line[splitPosition+1:]
+	ownerPatterns = rightSide
 	return
 }

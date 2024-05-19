@@ -15,6 +15,59 @@ import (
 	"time"
 )
 
+// Return a list of users and associated emails that are direct members of the specified project. Only returns
+// users and emails that the server.GitlabToken identity has permission to see. userSource must be one of:
+// DIRECT, INVITED_GROUPS. For self-managed and dedicated SaaS instances of GitLab, I suggest using an admin token.
+func (server Server) GetDirectUserMembers(projectFullPath string, userSource string) (usernamesFound []string, emailsFound []string, err error) {
+	switch userSource {
+	case "DIRECT", "INVITED_GROUPS":
+		// valid
+	default:
+		panic("GetDirectUserMembers() userSource must be one of DIRECT, INVITED_GROUPS: '" + userSource + "'")
+	}
+	query := `query {project(fullPath: "` + projectFullPath +
+		`") {projectMembers(relations: ` + userSource + `) {pageInfo {endCursor startCursor hasNextPage} ` +
+		`nodes {id user {id username publicEmail emails {nodes {email}}}}}}}`
+	for {
+		_, jsonResponse, queryErr := server.RunGraphQlQuery(query)
+		if err != nil {
+			err = fmt.Errorf("GetDirectUserMembers(): %w", queryErr)
+			return
+		}
+		var queryResults ProjectMembersQueryResponse
+		err = json.Unmarshal(jsonResponse, &queryResults)
+		if err != nil {
+			err = fmt.Errorf("GetDirectUserMembers() error encounted while unmarshaling '%v': %w", string(jsonResponse), err)
+			return
+		}
+		// Append username and any emails to returns
+		for _, member := range queryResults.Data.Project.ProjectMembers.Nodes {
+			usernamesFound = append(usernamesFound, member.User.Username)
+			publicEmail := member.User.PublicEmail
+			if publicEmail != "" {
+				emailsFound = append(emailsFound, publicEmail)
+			}
+			for _, email := range member.User.Emails.Nodes {
+				if email.Email != publicEmail {
+					emailsFound = append(emailsFound, email.Email)
+				}
+			}
+		}
+		// Check if the GraphQL results still have another page to process
+		if queryResults.Data.Project.ProjectMembers.PageInfo.HasNextPage {
+			// Update the query to give the next page of results
+			pageEndCursor := queryResults.Data.Project.ProjectMembers.PageInfo.EndCursor
+			query = `query {project(fullPath: "` + projectFullPath +
+				`") {projectMembers(relations: ` + userSource + ` after:"` + pageEndCursor +
+				`") {pageInfo {endCursor startCursor hasNextPage} nodes {id user {id username publicEmail emails {nodes {email}}}}}}}`
+		} else {
+			// Break if there are no more pages left
+			break
+		}
+	}
+	return
+}
+
 // Search in GitLab for the specified list of potential usernames. Return a list of all of the
 // usernames that were found as valid users in GitLab.
 // Search documentation: https://docs.gitlab.com/ee/api/graphql/users_example.html
