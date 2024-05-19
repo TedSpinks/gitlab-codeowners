@@ -20,7 +20,7 @@ func init() {
 }
 
 // Check GitLab's 3 supported locations for CODEOWNERS files, in order of precedence, and save the
-// path of the first one found. https://docs.gitlab.com/ee/user/project/codeowners/#codeowners-file
+// path of the first one found.
 func (co *CodeownersFileAnatomy) determineCodeownersPath() error {
 	supportedLocations := [...]string{"CODEOWNERS", "docs/CODEOWNERS", ".gitlab/CODEOWNERS"}
 	for _, location := range supportedLocations {

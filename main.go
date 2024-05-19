@@ -50,49 +50,54 @@ func main() {
 	// Check codeowners syntax
 	err = graphqlServer.CheckCodeownersSyntax(analysis.Co.CodeownersFilePath, eVars.ProjectPath, eVars.Branch)
 	if err != nil {
-		log.Fatalln("error validating CODEOWNERS syntax: " + err.Error())
+		fmt.Println("\nSyntax check of CODEOWNERS: FAILED")
+		log.Fatalf(err.Error()) // Stop the program, no sense in trying to analyze a broken file
 	}
+	fmt.Printf("\nSyntax check of '%v': PASSED\n", analysis.Co.CodeownersFilePath)
 	// Analyze codeowners file structure
 	analysis.Co.Analyze()
-	fmt.Println("All user and/or group patterns: ", analysis.Co.UserAndGroupPatterns)
-	fmt.Println("All file patterns: ", analysis.Co.FilePatterns)
-	var failedChecks []string
+	// Init tracking vars
+	hasFailures := false
 	// Check owners
 	ugList := analysis.Co.UserAndGroupPatterns
 	eList := analysis.Co.EmailPatterns
 	userAndGroupLeftovers, emailLeftovers, err := checkOwners(graphqlServer, restServer, eVars.ProjectPath, ugList, eList)
-	if err != nil {
-		panic("error while checking owner patterns: " + err.Error())
+	if !checkAndPrintResults(err, "Direct user and group membership check", userAndGroupLeftovers, "Unable to find:") {
+		hasFailures = true
 	}
-	if len(userAndGroupLeftovers) > 0 {
-		msg := "Did not find these users and/or groups as direct project members: " + strings.Join(userAndGroupLeftovers, ", ")
-		failedChecks = append(failedChecks, msg)
-	}
-	if len(emailLeftovers) > 0 {
-		msg := "Did not find these emails as direct project members: " + strings.Join(emailLeftovers, ", ")
-		failedChecks = append(failedChecks, msg)
+	if !checkAndPrintResults(err, "Direct user email membership check", emailLeftovers, "Unable to find:") {
+		hasFailures = true
 	}
 	// Check file patterns
-	badPatterns, err := checkFilePatterns(analysis.Co.FilePatterns)
-	if err != nil {
-		panic("error while checking file patterns: " + err.Error())
+	badFilePatterns, err := checkFilePatterns(analysis.Co.FilePatterns)
+	if !checkAndPrintResults(err, "File pattern check", badFilePatterns, "Unable to find:") {
+		hasFailures = true
 	}
-	if len(badPatterns) > 0 {
-		msg := "The following file patterns did not evaluate to files in the project: " + strings.Join(badPatterns, ", ")
-		failedChecks = append(failedChecks, msg)
+	if hasFailures {
+		fmt.Printf("\n")
+		log.Fatalln("See failures noted above.")
 	}
-	// Print results and exit
-	handleFailures(failedChecks)
 }
 
-// If there were any failures, then print them out and exit with an error code
-func handleFailures(failedChecks []string) {
-	if len(failedChecks) > 0 {
-		for _, failure := range failedChecks {
-			fmt.Fprintln(os.Stderr, failure)
-		}
-		log.Fatal("Failures noted above.")
+// Returns true if the results of a check indicate a pass. Returns false for failure(s). Prints the failure details
+// to the console for the user to read.
+func checkAndPrintResults(err error, checkName string, leftovers []string, badPatternMsg string) (passed bool) {
+	passed = (len(leftovers) == 0 && err == nil)
+	status := "PASSED"
+	if !passed {
+		status = "FAILED"
 	}
+	fmt.Println("\n" + checkName + ": " + status)
+	indent := "     "
+	if err != nil {
+		fmt.Println(indent + checkName + " error: " + err.Error())
+	} else if !passed {
+		fmt.Println(indent + badPatternMsg)
+		for _, leftover := range leftovers {
+			fmt.Println(indent + indent + leftover)
+		}
+	}
+	return
 }
 
 // Verify that each file pattern matches at least one file. Return any patterns that do not have any matches.
