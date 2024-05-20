@@ -9,7 +9,6 @@ compile:
     - go get
     - go vet
     - go build
-    - ./gitlab-codeowners
   artifacts:
     paths:
       - gitlab-codeowners
