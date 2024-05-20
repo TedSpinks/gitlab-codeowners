@@ -37,22 +37,22 @@ func main() {
 	checkSyntax(graphqlServer, analysis.Co.CodeownersFilePath, eVars.ProjectPath, eVars.Branch)
 	// Analyze codeowners file structure
 	analysis.Co.Analyze()
-	if !checkAndPrintResults(nil, "Malformed users and groups check", analysis.Co.IgnoredPatterns, "Users or groups that do not start with '@':") {
+	if !checkAndPrintResults("Malformed users and groups check", nil, analysis.Co.IgnoredPatterns, "Users or groups that do not start with '@':") {
 		hasFailures = true
 	}
 	// Check owners
 	ugList := analysis.Co.UserAndGroupPatterns
 	eList := analysis.Co.EmailPatterns
 	userAndGroupLeftovers, emailLeftovers, err := checkOwners(graphqlServer, restServer, eVars.ProjectPath, ugList, eList)
-	if !checkAndPrintResults(err, "Direct user and group membership check", userAndGroupLeftovers, "Unable to find:") {
+	if !checkAndPrintResults("Direct user and group membership check", err, userAndGroupLeftovers, "Unable to find:") {
 		hasFailures = true
 	}
-	if !checkAndPrintResults(err, "Direct user email membership check", emailLeftovers, "Unable to find:") {
+	if !checkAndPrintResults("Direct user email membership check", err, emailLeftovers, "Unable to find:") {
 		hasFailures = true
 	}
 	// Check file patterns
 	badFilePatterns, err := checkFilePatterns(analysis.Co.FilePatterns)
-	if !checkAndPrintResults(err, "File pattern check", badFilePatterns, "Unable to find:") {
+	if !checkAndPrintResults("File pattern check", err, badFilePatterns, "Unable to find:") {
 		hasFailures = true
 	}
 	// Exit
@@ -99,7 +99,7 @@ func setupGitlabConnections(eVars envVarArgs) (graphql.Server, rest.Server) {
 
 // Returns true if the results of a check indicate a pass (no error and leftovers is empty).
 // Returns false for failure(s). Prints the failure details to the console for the user to read.
-func checkAndPrintResults(err error, checkName string, leftovers []string, leftoverMsg string) (passed bool) {
+func checkAndPrintResults(checkName string, err error, leftovers []string, leftoverMsg string) (passed bool) {
 	passed = (len(leftovers) == 0 && err == nil)
 	status := "PASSED"
 	if !passed {
@@ -157,7 +157,7 @@ func translateCoToGlob(pattern string) (translatedPattern string) {
 	return
 }
 
-// Checks that owner entries (users, groups, emails) are direct members of the project. Since user and group owners are both
+// Check that owner entries (users, groups, emails) are direct members of the project. Since user and group owners are both
 // specified by "@name" and are therefore indistinguishable until checked, these are provided in a combined list.
 // Returns any remaining users/groups and emails that were not found as direct members of the project.
 func checkOwners(uChecker userChecker, gChecker groupChecker, projectFullPath string, ugList []string, emailList []string) (
@@ -206,26 +206,22 @@ func checkOwners(uChecker userChecker, gChecker groupChecker, projectFullPath st
 }
 
 // Take the "original" slice and remove all the elements that intersect with the "filterAgainst"
-// slice.
-func filterSlice(original []string, filterAgainst []string) []string {
+// slice. Return the new slice.
+func filterSlice(original []string, filterAgainst []string) (filteredList []string) {
 	slog.Debug("filterSlice() is filtering original slice: " + strings.Join(original, " "))
-	for _, filterElement := range filterAgainst {
-		slog.Debug("...filtering '" + filterElement + "'")
-		originalIndex := slices.IndexFunc(original, func(e string) bool {
-			return e == filterElement
+	// Max size of the filtered output list is the original list size (if no elements intersect)
+	filteredList = make([]string, 0, len(original))
+	// Check each element of the original list against the filterAgainst list
+	for _, originalElement := range original {
+		intersect := slices.IndexFunc(filterAgainst, func(e string) bool {
+			return e == originalElement
 		})
-		if originalIndex > -1 {
-			original = remove(original, originalIndex)
+		// If this element is not in filterAgainst, then keep it
+		if intersect == -1 {
+			filteredList = append(filteredList, originalElement)
 		}
 	}
-	return original
-}
-
-// Remove the element at index "i" from a slice, without creating a new slice. This is much better for
-// performance, but does not preserve the slice's original order. https://stackoverflow.com/a/37335777
-func remove(s []string, i int) []string {
-	s[i] = s[len(s)-1]
-	return s[:len(s)-1]
+	return
 }
 
 // Set slog's handler to either Info or Debug logging level
