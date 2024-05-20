@@ -54,5 +54,6 @@ simple-test:
     DEBUG: "false"
   script:
     - pwd
-    - whoami
+    - ls -l /
+    - ls -l /gitlab
     - /gitlab/gitlab-codeowners
