@@ -8,7 +8,7 @@ compile:
   script:
     - go get
     - go vet
-    - go build
+    - CGO_ENABLED=0 go build
   artifacts:
     paths:
       - gitlab-codeowners
