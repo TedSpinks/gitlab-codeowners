@@ -9,9 +9,9 @@ import (
 
 	"github.com/bmatcuk/doublestar" // because Glob() in "path/filepath" doesn't support "**"
 	"github.com/caarlos0/env/v11"
-	"gitlab.com/tedspinks/gitlab-codeowners/analysis"
-	"gitlab.com/tedspinks/gitlab-codeowners/graphql"
-	"gitlab.com/tedspinks/gitlab-codeowners/rest"
+	"gitlab.com/tedspinks/validate-codeowners/analysis"
+	"gitlab.com/tedspinks/validate-codeowners/graphql"
+	"gitlab.com/tedspinks/validate-codeowners/rest"
 )
 
 type envVarArgs struct {

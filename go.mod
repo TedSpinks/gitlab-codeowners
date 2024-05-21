@@ -1,4 +1,4 @@
-module gitlab.com/tedspinks/gitlab-codeowners
+module gitlab.com/tedspinks/validate-codeowners
 
 go 1.22.1
 
