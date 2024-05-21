@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"slices"
@@ -57,8 +56,8 @@ func main() {
 	}
 	// Exit
 	if hasFailures {
-		fmt.Printf("\n")
-		log.Fatalln("See failures noted above.")
+		fmt.Println("\nSee failures noted above.")
+		os.Exit(1)
 	}
 }
 
@@ -67,7 +66,8 @@ func getEnvVerArgs(eVars *envVarArgs) {
 	opts := env.Options{RequiredIfNoDef: true}
 	err := env.ParseWithOptions(eVars, opts)
 	if err != nil {
-		log.Fatalln("error reading environment variables: " + err.Error())
+		fmt.Println("\nError " + err.Error())
+		os.Exit(1)
 	}
 }
 
@@ -77,7 +77,8 @@ func checkSyntax(checker syntaxChecker, coFilePath string, projectPath string, b
 	err := checker.CheckCodeownersSyntax(coFilePath, projectPath, branch)
 	if err != nil {
 		fmt.Println("\nSyntax check of CODEOWNERS: FAILED")
-		log.Fatalf(err.Error())
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 	fmt.Printf("\nSyntax check of '%v': PASSED\n", analysis.Co.CodeownersFilePath)
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -38,7 +39,8 @@ func (co *CodeownersFileAnatomy) determineCodeownersPath() error {
 }
 
 // Return whether or not the specified file can be found within the file system. Note that Linux has a case
-// sensitive file system, but Mac (surprisingly) and Windows do not. To test whether your file system is case
+// sensitive file system, but Mac (surprisingly) and Windows do not. So if you're on Mac with a file called
+// "codeowners", then fileExists("CODEOWNERS") will return true. To test whether your file system is case
 // sensitive, try creating 2 files with the same spelling, but different cases. A case sensitive file system
 // WILL allow this.
 func fileExists(filePath string) (bool, error) {
@@ -54,6 +56,7 @@ func fileExists(filePath string) (bool, error) {
 	}
 }
 
+// Analyze the CODEOWNERS file that init() stored in co, and store the analysis data there too.
 func (co *CodeownersFileAnatomy) Analyze() {
 	// Read in the CODEOWNERS file
 	if len(co.CodeownersFileLines) == 0 {
@@ -97,15 +100,18 @@ func (co *CodeownersFileAnatomy) Analyze() {
 	co.IgnoredPatterns = setMapToSlice(ignoredPatternsMap)
 }
 
-// Convert a map that was used as a set (list of *unique* strings) into a slice of strings
+// Convert a map that was used as a set (list of *unique* strings) into a slice of sorted strings
+// Since maps have randomized order, the output slice must be sorted so that this function always
+// gives consitent output when given the same input (useful for testing).
 func setMapToSlice(m map[string]bool) []string {
 	i := 0
-	delete(m, "") // Delete any empty strings (junk) returned by splitCodeownersLine() and splitOwnerPatterns()
+	delete(m, "") // Delete any empty strings (junk)
 	keys := make([]string, len(m))
 	for k := range m {
 		keys[i] = k
 		i++
 	}
+	slices.Sort(keys)
 	return keys
 }
 
@@ -143,7 +149,7 @@ func splitCodeownersLine(line string) (sectionHeading string, filePattern string
 	if line == "" || strings.HasPrefix(line, "#") {
 		return
 	}
-	splitPosition := 0
+	splitPosition := 0      // First occurrence of an un-escaped space or tab, that's not within a section heading
 	firstCharIsHat := false // hat aka carat
 	sectionHeadingStarted := false
 	sectionHeadingEnded := false

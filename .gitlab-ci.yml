@@ -1,3 +1,10 @@
+include:
+  - project: "${CI_PROJECT_PATH}"
+    ref: "${CI_COMMIT_SHA}"
+    file: templates/validate-codeowners.yml
+    inputs:
+      GITLAB_TOKEN: ${GITLAB_TOKEN}
+
 stages:
   - build
   - test
@@ -48,12 +55,4 @@ build-image:
         - "**/*.go"
 
 simple-test:
-  stage: test
-  image: registry.gitlab.com/tedspinks/gitlab-codeowners:latest
-  variables:
-    DEBUG: "false"
-  script:
-    - pwd
-    - ls -l /
-    - ls -l /gitlab
-    - /gitlab/gitlab-codeowners
+  extends: .validate-codeowners
