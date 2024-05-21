@@ -1,0 +1,24 @@
+spec:
+  inputs:
+    GITLAB_TOKEN:
+      description: | 
+        Required, GitLab token with "read_api" scope. This is usually an Admin token.
+        Permission details: https://docs.gitlab.com/ee/api/members.html, Summary:
+        1) Owner of the target project
+        2) Member of ALL groups thay might be listed as Codeowners (or that might contain users listed as Codeowners)
+        3) To validate emails: group owners for enterprise users, or an Admin token
+    GITLAB_TIMEOUT_SECS:
+      description: Timeout for communication with the GitLab APIs
+      default: "30"
+---
+
+.validate-codeowners:
+  stage: test
+  image: registry.gitlab.com/tedspinks/gitlab-codeowners:latest
+  variables:
+    DEBUG: "false" # You can enable debug logging (it's VERY verbose) by setting this from the UI of a manual run.
+  before_script:
+    - export GITLAB_TOKEN=$[[ inputs.GITLAB_TOKEN ]]
+    - export GITLAB_TIMEOUT_SECS=$[[ inputs.GITLAB_TIMEOUT_SECS | expand_vars ]]
+  script:
+    - /gitlab/gitlab-codeowners
