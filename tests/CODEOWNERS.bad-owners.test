@@ -1,0 +1,19 @@
+
+Syntax check of 'CODEOWNERS': PASSED
+
+Malformed users and groups check: FAILED
+     Users or groups that do not start with '@':
+          not_a_valid_owner
+
+Direct user and group membership check: FAILED
+     Unable to find:
+          codeowners-test1/indirect-member
+          pretend-user-or-group
+
+Direct user email membership check: FAILED
+     Unable to find:
+          notreal@email.com
+
+File pattern check: PASSED
+
+See failures noted above.

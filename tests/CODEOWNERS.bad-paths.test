@@ -1,0 +1,18 @@
+
+Syntax check of 'CODEOWNERS': PASSED
+
+Malformed users and groups check: PASSED
+
+Direct user and group membership check: PASSED
+
+Direct user email membership check: PASSED
+
+File pattern check: FAILED
+     Unable to find:
+          *.junk
+          /fake-dir/**/go.mod
+          gitlab-ci.yml
+          readme.*
+          templates/*.go
+
+See failures noted above.

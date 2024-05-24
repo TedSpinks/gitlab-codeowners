@@ -1,0 +1,14 @@
+* @tedspinks
+
+[DevOps] @ted-gmail
+.gitlab-ci.yml @pretend-user-or-group
+
+[Docs] not_a_valid_owner
+/README.* notreal@email.com @tedspinks
+*.txt
+
+[Template]
+templates/* ted.spinks@gmail.com 
+*.go @codeowners-test1
+LICENSE.txt @codeowners-test1/direct-member
+rest/rest.go @codeowners-test1/indirect-member

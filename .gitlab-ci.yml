@@ -54,5 +54,44 @@ build-image:
         - Dockerfile
         - "**/*.go"
 
-simple-test:
+test-valid-codeowners:
+  stage: test
   extends: .validate-codeowners
+
+test-bad-syntax:
+  stage: test
+  extends: .validate-codeowners
+  before_script:
+    # Remove ./CODEOWNERS so that it validates ./docs/CODEOWNERS
+    - rm ./CODEOWNERS
+    - !reference [.validate-codeowners, before_script]
+
+test-bad-owner-patterns:
+  stage: test
+  extends: .validate-codeowners
+  script:
+    - cp tests/CODEOWNERS.bad-owners ./CODEOWNERS
+    - |
+      echo Disable error checking before running failure test
+      set +e
+    - /gitlab/gitlab-codeowners > $CI_JOB_NAME.test
+    - |
+      echo Re-enable error checking
+      set -e
+    # Unexpected results with result in a non-zero exit code
+    - diff $CI_JOB_NAME.test tests/CODEOWNERS.bad-paths.test
+
+test-bad-filepath-patterns:
+  stage: test
+  extends: .validate-codeowners
+  script:
+    - cp tests/CODEOWNERS.bad-paths ./CODEOWNERS
+    - |
+      echo Disable error checking before running failure test
+      set +e
+    - /gitlab/gitlab-codeowners > $CI_JOB_NAME.test
+    - |
+      echo Re-enable error checking
+      set -e
+    # Unexpected results with result in a non-zero exit code
+    - diff $CI_JOB_NAME.test tests/CODEOWNERS.bad-owners.test

@@ -1,0 +1,11 @@
+ * @tedspinks
+
+*.junk @codeowners-test1/direct-member
+
+[DevOps] @ted-gmail
+gitlab-ci.yml
+templates/*.go ted.spinks@gmail.com 
+
+[Docs] @codeowners-test1
+readme.*
+/fake-dir/**/go.mod
