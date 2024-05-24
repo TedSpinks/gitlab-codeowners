@@ -5,8 +5,8 @@ spec:
         Required, GitLab token with "read_api" scope. This is usually an Admin token.
         Permission details: https://docs.gitlab.com/ee/api/members.html, Summary:
         1) Owner of the target project
-        2) Member of ALL groups thay might be listed as Codeowners (or that might contain users listed as Codeowners)
-        3) To validate emails: group owners for enterprise users, or an Admin token
+        2) Member of ALL groups that might be listed as Codeowners (or that might contain users listed as Codeowners)
+        3) To validate emails: group owners for enterprise users, or admin for self-hosted
     GITLAB_TIMEOUT_SECS:
       description: Timeout for communication with the GitLab APIs
       default: "30"

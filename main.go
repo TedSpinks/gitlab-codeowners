@@ -21,7 +21,7 @@ type envVarArgs struct {
 	GitlabRestUrl     string `env:"CI_API_V4_URL,notEmpty"`
 	GitlabToken       string `env:"GITLAB_TOKEN,notEmpty"`
 	GitlabTimeoutSecs int    `env:"GITLAB_TIMEOUT_SECS" envDefault:"30"`
-	Debug             bool   `env:"DEBUG" envDefault:"false"`
+	Debug             bool   `env:"CODEOWNERS_DEBUG" envDefault:"false"`
 }
 
 func main() {

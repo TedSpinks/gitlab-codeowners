@@ -69,14 +69,14 @@ test-bad-syntax:
     - diff $CI_JOB_NAME.test tests/CODEOWNERS.bad-syntax.test
 
 test-bad-owner-patterns:
-  extends: .validate-codeowners
+  extends: .test-failure
   script:
     - cp tests/CODEOWNERS.bad-owners ./CODEOWNERS
     - !reference [.test-failure, script]
     - diff $CI_JOB_NAME.test tests/CODEOWNERS.bad-owners.test
 
 test-bad-filepath-patterns:
-  extends: .validate-codeowners
+  extends: .test-failure
   script:
     - cp tests/CODEOWNERS.bad-paths ./CODEOWNERS
     - !reference [.test-failure, script]

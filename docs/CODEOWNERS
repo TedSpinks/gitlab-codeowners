@@ -1,4 +1,7 @@
- # This is broken CODEOWNERS file
+# This is broken CODEOWNERS file, used for testing.
+# It must be committed to the project in one of GitLab's 3 supported locations (/ /docs or /.gitlab)
+# in order for the CI pipeline to check its syntax.
+
  * @tedspinks
 
 [BrokenHeader
