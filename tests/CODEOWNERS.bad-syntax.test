@@ -1,0 +1,4 @@
+
+Syntax check of CODEOWNERS: FAILED
+validation error 'invalid_section_format' on lines: 4
+validation error 'missing_entry_owner' on lines: 4, 5
