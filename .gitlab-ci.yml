@@ -65,6 +65,9 @@ test-bad-syntax:
     # Remove ./CODEOWNERS so that it validates ./docs/CODEOWNERS
     - rm ./CODEOWNERS
     - !reference [.validate-codeowners, before_script]
+  script:
+    - !reference [.validate-codeowners, script]
+    - echo $?
   allow_failure: true
 
 test-bad-owner-patterns:
