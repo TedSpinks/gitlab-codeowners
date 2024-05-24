@@ -61,14 +61,18 @@ test-valid-codeowners:
 test-bad-syntax:
   stage: test
   extends: .validate-codeowners
-  before_script:
+  script:
     # Remove ./CODEOWNERS so that it validates ./docs/CODEOWNERS
     - rm ./CODEOWNERS
-    - !reference [.validate-codeowners, before_script]
-  script:
-    - !reference [.validate-codeowners, script]
-    - echo $?
-  allow_failure: true
+    - |
+      echo Disable error checking before running failure test
+      set +e
+    - /gitlab/gitlab-codeowners | tee $CI_JOB_NAME.test
+    - |
+      echo Re-enable error checking
+      set -e
+    # Unexpected results with result in a non-zero exit code
+    - diff $CI_JOB_NAME.test tests/CODEOWNERS.bad-syntax.test
 
 test-bad-owner-patterns:
   stage: test
@@ -78,7 +82,7 @@ test-bad-owner-patterns:
     - |
       echo Disable error checking before running failure test
       set +e
-    - /gitlab/gitlab-codeowners > $CI_JOB_NAME.test
+    - /gitlab/gitlab-codeowners | tee $CI_JOB_NAME.test
     - |
       echo Re-enable error checking
       set -e
@@ -93,7 +97,7 @@ test-bad-filepath-patterns:
     - |
       echo Disable error checking before running failure test
       set +e
-    - /gitlab/gitlab-codeowners > $CI_JOB_NAME.test
+    - /gitlab/gitlab-codeowners | tee $CI_JOB_NAME.test
     - |
       echo Re-enable error checking
       set -e
