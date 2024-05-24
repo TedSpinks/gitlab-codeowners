@@ -21,4 +21,4 @@ spec:
     - export GITLAB_TOKEN=$[[ inputs.GITLAB_TOKEN ]]
     - export GITLAB_TIMEOUT_SECS=$[[ inputs.GITLAB_TIMEOUT_SECS | expand_vars ]]
   script:
-    - /gitlab/gitlab-codeowners
+    - /gitlab/validate-codeowners

@@ -2,7 +2,7 @@ FROM alpine:latest
 
 WORKDIR /gitlab
 
-COPY ./gitlab-codeowners /gitlab/
+COPY ./validate-codeowners /gitlab/
 
 RUN chown -R 1001:0 /gitlab && chmod -R g=u /gitlab
 
