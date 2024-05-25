@@ -5,6 +5,10 @@ include:
     inputs:
       GITLAB_TOKEN: ${GITLAB_TOKEN}
 
+variables:
+  PACKAGE_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/binaries/${CI_COMMIT_TAG}/validate-codeowners-linux-amd64"
+  IMAGE_UI_URL: "https://gitlab.com/tedspinks/validate-codeowners/container_registry/6404913?orderBy=NAME&sort=asc&search[]=$CI_COMMIT_TAG"
+
 stages:
 - build
 - test
@@ -95,16 +99,21 @@ test-bad-filepath-patterns:
     - !reference [.test-failure, script]
     - diff $CI_JOB_NAME.test tests/CODEOWNERS.bad-paths.test
 
-release_job:
+publish-binary:
+  stage: release
+  image: curlimages/curl:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/
+  script:
+    - 'curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" --upload-file validate-codeowners ${PACKAGE_URL}'
+
+release:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   rules:
     - if: $CI_COMMIT_TAG =~ /^v/
-  variables:
-    PACKAGE_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/binaries/${CI_COMMIT_TAG}/validate-codeowners-linux-amd64"
-    IMAGE_UI_URL: "https://gitlab.com/tedspinks/validate-codeowners/container_registry/6404913?orderBy=NAME&sort=asc&search[]=$CI_COMMIT_TAG"
   script:
-    - 'curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" --upload-file validate-codeowners ${PACKAGE_URL}'
+    - echo "Release job for $CI_COMMIT_TAG"
   release:
     tag_name: '$CI_COMMIT_TAG'
     description: '$CI_COMMIT_TAG'
@@ -116,4 +125,4 @@ release_job:
         - name: Linux binary
           url: ${PACKAGE_URL}
           filepath: /binaries/validate-codeowners-linux-amd64
-          link_type: 'other' # optional
+          link_type: other
