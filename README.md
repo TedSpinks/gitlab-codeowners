@@ -27,7 +27,7 @@ Since we almost always want our CODEOWNERS file to **enforce** specific approval
 ```yaml
 include:
   - project: tedspinks/validate-codeowners
-    ref: main
+    ref: v1.0.0  # or "main" to always run the latest version
     file: templates/validate-codeowners.yml
     inputs:
       GITLAB_TOKEN: ${GITLAB_TOKEN}
@@ -83,6 +83,6 @@ export CI_API_V4_URL=https://gitlab.com/api/v4
 
 ## Technical Design Considerations
 
-The GitLab GraphQL API includes a nice [CODEOWNERS syntax validator](https://docs.gitlab.com/ee/api/graphql/reference/#repositoryvalidatecodeownerfile). This is the same validator that runs when you edit a CODEWONERS file from the GitLab web UI. Rather than re-invent the wheel and write a complete parser, I decided to make use of this excellent API function. With that in hand, I was then able to write a *much simpler* `splitCodeownersLine()` function, which just grabs the file patterns and owners from each line.
+The GitLab GraphQL API includes a nice [CODEOWNERS syntax validator](https://docs.gitlab.com/ee/api/graphql/reference/#repositoryvalidatecodeownerfile). This is the same validator that runs when you edit a CODEWONERS file from the GitLab web UI. Rather than re-invent the wheel and write a complete parser, I decided to make use of this excellent API function. With syntax taken care of, I was able to write a *much simpler* `splitCodeownersLine()` function, which just grabs the file patterns and owners from each line.
 
 To do the actual validations, I tried to use GitLab's newer GraphQL API as mush as possible. However, it wasn't apparent how to get a project's `shared_with_groups` field from the GraphQL queries, so I ended up using the REST `projects/` endpoint for that piece.

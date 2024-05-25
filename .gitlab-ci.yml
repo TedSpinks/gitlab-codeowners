@@ -6,7 +6,6 @@ include:
       GITLAB_TOKEN: ${GITLAB_TOKEN}
 
 variables:
-  WORKS:       "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/my_package/0.0.3/validate-codeowners"
   PACKAGE_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/linux_amd64/${CI_COMMIT_TAG}/validate-codeowners"
   IMAGE_UI_URL: "https://gitlab.com/tedspinks/validate-codeowners/container_registry/6404913?orderBy=NAME&sort=asc&search[]=$CI_COMMIT_TAG"
 
@@ -66,9 +65,12 @@ build-image:
 
 test-valid-codeowners:
   extends: .validate-codeowners
+  # specify "latest" so we get the one that was just built
+  image: registry.gitlab.com/tedspinks/validate-codeowners:latest
 
 .test-failure:
   extends: .validate-codeowners
+  image: registry.gitlab.com/tedspinks/validate-codeowners:latest
   script:
     - |
       echo Disable error checking before running failure test

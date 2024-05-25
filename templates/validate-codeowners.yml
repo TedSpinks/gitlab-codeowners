@@ -14,7 +14,7 @@ spec:
 
 .validate-codeowners:
   stage: test
-  image: registry.gitlab.com/tedspinks/validate-codeowners:latest
+  image: registry.gitlab.com/tedspinks/validate-codeowners:v1.0.0
   variables:
     DEBUG: "false" # You can enable debug logging (it's VERY verbose) by setting this from the UI of a manual run.
   before_script:
