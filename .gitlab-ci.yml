@@ -6,7 +6,8 @@ include:
       GITLAB_TOKEN: ${GITLAB_TOKEN}
 
 variables:
-  PACKAGE_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/binaries/${CI_COMMIT_TAG}/validate-codeowners-linux-amd64"
+  WORKS:       "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/my_package/0.0.3/validate-codeowners"
+  PACKAGE_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/linux_amd64/${CI_COMMIT_TAG}/validate-codeowners"
   IMAGE_UI_URL: "https://gitlab.com/tedspinks/validate-codeowners/container_registry/6404913?orderBy=NAME&sort=asc&search[]=$CI_COMMIT_TAG"
 
 stages:
