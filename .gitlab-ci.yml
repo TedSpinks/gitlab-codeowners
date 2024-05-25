@@ -107,7 +107,9 @@ publish-binary:
     - if: $CI_COMMIT_TAG =~ /^v/
   script:
     - ls -la
-    - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file validate-codeowners "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/my_package/0.0.3/validate-codeowners"'
+    - echo ${CI_COMMIT_TAG}
+    - echo ${PACKAGE_URL}
+    - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file validate-codeowners "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/my_package/v0.0.3/validate-codeowners"'
     - 'curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" --upload-file validate-codeowners "${PACKAGE_URL}"'
 
 release:
