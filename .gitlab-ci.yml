@@ -108,8 +108,12 @@ release_job:
   release:
     tag_name: '$CI_COMMIT_TAG'
     description: '$CI_COMMIT_TAG'
-    assets_link: |
-      [
-        {"name": "Container image", "url": "IMAGE_UI_URL", "link_type": "image"},
-        {"name": "Linux binary", "url": "${PACKAGE_URL}", "filepath": "/binaries/validate-codeowners-linux-amd64"}
-      ]
+    assets:
+      links:
+        - name: Container image
+          url: ${IMAGE_UI_URL}
+          link_type: image
+        - name: Linux binary
+          url: ${PACKAGE_URL}
+          filepath: /binaries/validate-codeowners-linux-amd64
+          link_type: 'other' # optional
