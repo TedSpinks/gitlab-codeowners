@@ -16,7 +16,7 @@ It performs the following validation checks:
 
 What's all the fuss about checking [direct](https://docs.gitlab.com/ee/user/project/members/) memberships? From the [GitLab documentation](https://docs.gitlab.com/ee/user/project/codeowners/#group-inheritance-and-eligibility):
 
-> For approval to be required, groups as Code Owners must have a direct membership (not inherited membership) in the project. Approval can only be *optional* for groups that inherit membership. Members in the Code Owners group also must be direct members, and not inherit membership from any parent groups.
+> For approval to be *required*, groups as Code Owners must have a direct membership (not inherited membership) in the project. Approval can only be *optional* for groups that inherit membership. Members in the Code Owners group also must be direct members, and not inherit membership from any parent groups.
 
 Since we almost always want our CODEOWNERS file to **enforce** specific approvals, this job makes sure that the required direct memberships are present.
 
