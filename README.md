@@ -16,7 +16,7 @@ It performs the following validation checks:
 
 What's all the fuss about checking [direct](https://docs.gitlab.com/ee/user/project/members/) memberships? From the [GitLab documentation](https://docs.gitlab.com/ee/user/project/codeowners/#group-inheritance-and-eligibility):
 
-> For approval to be required, groups as Code Owners must have a direct membership (not inherited membership) in the project. Approval can only be optional for groups that inherit membership. Members in the Code Owners group also must be direct members, and not inherit membership from any parent groups.
+> For approval to be required, groups as Code Owners must have a direct membership (not inherited membership) in the project. Approval can only be *optional* for groups that inherit membership. Members in the Code Owners group also must be direct members, and not inherit membership from any parent groups.
 
 Since we almost always want our CODEOWNERS file to **enforce** specific approvals, this job makes sure that the required direct memberships are present.
 
@@ -46,7 +46,10 @@ validate-codeowners:
 ## Example CLI Usage
 
 ```bash
-cd my-git-clone-directory
+sudo curl -L -o /usr/local/bin/validate-codeowners \
+ https://gitlab.com/tedspinks/validate-codeowners/-/releases/1.0.0/downloads/linux-amd64/validate-codeowners
+
+sudo chmod +x /usr/local/bin/validate-codeowners
 
 export GITLAB_TOKEN=glpat-blahblah12345
 export CI_PROJECT_PATH=my-group/my-project-with-codeowners-file
@@ -54,7 +57,9 @@ export CI_COMMIT_REF_NAME=my-branch
 export CI_API_GRAPHQL_URL=https://gitlab.com/api/graphql
 export CI_API_V4_URL=https://gitlab.com/api/v4
 
-./validate-codeowners
+cd my-git-clone-directory
+
+validate-codeowners
 ```
 
 ## Inputs
@@ -73,14 +78,14 @@ export CI_API_V4_URL=https://gitlab.com/api/v4
 
 #### GitLab [Predefined variables](https://docs.gitlab.com/ee/ci/variables/predefined_variables.html)
 
-- `CI_PROJECT_PATH` - The project namespace with the project name included.
-- `CI_COMMIT_REF_NAME` - The branch or tag name for which project is built.
-- `CI_API_GRAPHQL_URL` - The GitLab API GraphQL root URL
-- `CI_API_V4_URL` - The GitLab API v4 root URL.
+- `CI_PROJECT_PATH` - The namespace/project path of your project with the CODEOWNERS file you want to validate.
+- `CI_COMMIT_REF_NAME` - The branch or tag name of your project.
+- `CI_API_GRAPHQL_URL` - The GitLab API GraphQL root URL. For SaaS GitLab this will be https://gitlab.com/api/graphql.
+- `CI_API_V4_URL` - The GitLab REST API v4 root URL. For SaaS GitLab this will be https://gitlab.com/api/v4.
 
 
-## Technical Design Considerations
+## Design Considerations
 
-The GitLab GraphQL API includes a nice [CODEOWNERS syntax validator](https://docs.gitlab.com/ee/api/graphql/reference/#repositoryvalidatecodeownerfile). This is the same validator that runs when you edit a CODEWONERS file from the GitLab web UI. Rather than re-invent the wheel and write a complete parser, I decided to make use of this excellent API function. With syntax taken care of, I was able to write a *much simpler* `splitCodeownersLine()` function, which just grabs the file patterns and owners from each line.
+The GitLab GraphQL API includes a very nice [CODEOWNERS syntax validator](https://docs.gitlab.com/ee/api/graphql/reference/#repositoryvalidatecodeownerfile). I believe this is the same validator that runs when you edit a CODEWONERS file from the GitLab web UI. Rather than re-invent the wheel and write a complete parser, I decided to take advantage of this API function. So, with syntax taken care of, I was able to write a *much simpler* `splitCodeownersLine()` function, which just grabs the file patterns and owners from each line.
 
-To do the actual validations, I tried to use GitLab's newer GraphQL API as mush as possible. However, it wasn't apparent how to get a project's `shared_with_groups` field from the GraphQL queries, so I ended up using the REST `projects/` endpoint for that piece.
+To do the actual validations, I tried to use GitLab's newer GraphQL API as mush as possible. However, it wasn't apparent to me how to get a project's `shared_with_groups` field from the GraphQL queries, so I ended up using the REST `projects/` endpoint for that piece.
