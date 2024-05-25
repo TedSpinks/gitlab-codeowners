@@ -26,9 +26,7 @@ Since we almost always want our CODEOWNERS file to **enforce** specific approval
 .gitlab-ci.yml
 ```yaml
 include:
-  - project: tedspinks/validate-codeowners
-    ref: v1.0.0  # or "main" to always run the latest version
-    file: templates/validate-codeowners.yml
+  - component: gitlab.com/tedspinks/validate-codeowners/validate-codeowners@1.0.0
     inputs:
       GITLAB_TOKEN: ${GITLAB_TOKEN}
 
