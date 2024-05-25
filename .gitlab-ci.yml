@@ -104,7 +104,7 @@ release_job:
     PACKAGE_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/binaries/${CI_COMMIT_TAG}/validate-codeowners-linux-amd64"
     IMAGE_UI_URL: "https://gitlab.com/tedspinks/validate-codeowners/container_registry/6404913?orderBy=NAME&sort=asc&search[]=$CI_COMMIT_TAG"
   script:
-    - curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" --upload-file validate-codeowners ${PACKAGE_URL}
+    - 'curl --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" --upload-file validate-codeowners ${PACKAGE_URL}'
   release:
     tag_name: '$CI_COMMIT_TAG'
     description: '$CI_COMMIT_TAG'
