@@ -103,11 +103,11 @@ test-bad-filepath-patterns:
 publish-binary:
   stage: release
   image: curlimages/curl:latest
-  rules:
-    - if: $CI_COMMIT_TAG =~ /^v/
   script:
     - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file validate-codeowners "${PACKAGE_URL}" | tee result.txt'
     - grep "201 Created" result.txt
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v/
 
 release:
   stage: release
