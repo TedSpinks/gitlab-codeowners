@@ -1,6 +1,6 @@
 # [validate-codeowners](https://gitlab.com/tedspinks/validate-codeowners)
 
-This CI/CD component provides a hidden job that you can extend to validate your GitLab project's CODEOWNERS file. It also includes a Linux binary and Docker image, which you can run from your desktop or from your own CI/CD job.
+This CI/CD component provides a job to validate your GitLab project's CODEOWNERS file. It also includes a Linux binary and Docker image, which you can run from your desktop or from your own CI/CD job.
 
 It performs the following validation checks:
 
