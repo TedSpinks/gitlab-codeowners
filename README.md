@@ -86,6 +86,6 @@ validate-codeowners
 
 ## Design Considerations
 
-The GitLab GraphQL API includes a very nice [CODEOWNERS syntax validator](https://docs.gitlab.com/ee/api/graphql/reference/#repositoryvalidatecodeownerfile). I believe this is the same validator that runs when you edit a CODEWONERS file from the GitLab web UI. Rather than re-invent the wheel and write a complete parser, I decided to take advantage of this API function. So, with syntax taken care of, I was able to write a *much simpler* `splitCodeownersLine()` function, which just grabs the file patterns and owners from each line.
+The GitLab GraphQL API includes a very nice [CODEOWNERS syntax validator](https://docs.gitlab.com/ee/api/graphql/reference/#repositoryvalidatecodeownerfile). I believe this is the same validator that runs when you edit a CODEWONERS file from the GitLab web UI. Rather than re-invent the wheel and write a complete parser, I decided to take advantage of this API function. And, with syntax taken care of, I was able to write a *much simpler* `splitCodeownersLine()` function, which just grabs the file patterns and owners from each line.
 
 To do the actual validations, I tried to use GitLab's newer GraphQL API as mush as possible. However, it wasn't apparent to me how to get a project's `shared_with_groups` field from the GraphQL queries, so I ended up using the REST `projects/` endpoint for that piece.
