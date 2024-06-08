@@ -65,11 +65,19 @@ test-valid-codeowners:
   extends: .validate-codeowners
   # specify "latest" so we get the one that was just built
   image: registry.gitlab.com/tedspinks/validate-codeowners:latest
+  script:
+    - echo CI_COMMIT_REF_NAME $CI_COMMIT_REF_NAME
+    - echo CI_COMMIT_BRANCH not-in-MRs $CI_COMMIT_BRANCH
+    - echo CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+    - !reference [.validate-codeowners, script]
 
 .test-failure:
   extends: .validate-codeowners
   image: registry.gitlab.com/tedspinks/validate-codeowners:latest
   script:
+    - echo CI_COMMIT_REF_NAME $CI_COMMIT_REF_NAME
+    - echo CI_COMMIT_BRANCH not-in-MRs $CI_COMMIT_BRANCH
+    - echo CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
     - |
       echo Disable error checking before running failure test
       set +e
