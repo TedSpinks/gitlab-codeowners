@@ -21,4 +21,7 @@ spec:
     - export GITLAB_TOKEN=$[[ inputs.GITLAB_TOKEN ]]
     - export GITLAB_TIMEOUT_SECS=$[[ inputs.GITLAB_TIMEOUT_SECS | expand_vars ]]
   script:
+    - echo CI_COMMIT_REF_NAME $CI_COMMIT_REF_NAME
+    - echo CI_COMMIT_BRANCH not-in-MRs $CI_COMMIT_BRANCH
+    - echo CI_MERGE_REQUEST_SOURCE_BRANCH_NAME $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
     - /gitlab/validate-codeowners
