@@ -14,11 +14,10 @@ It performs the following validation checks:
 
 ## About direct memberships
 
-What's all the fuss about checking [direct](https://docs.gitlab.com/ee/user/project/members/) memberships? From the [GitLab documentation](https://docs.gitlab.com/ee/user/project/codeowners/#group-inheritance-and-eligibility):
+What's all the fuss about checking [direct](https://docs.gitlab.com/ee/user/project/members/) memberships? While you can add CODEOWNERS entries for both direct and inherited members of a project, CODEOWNERS entries for inherited members are only ***optional***, not required. Moreover, when reading a CODEOWNERS file, it is not obvious which entries will be optional vs. required - one would need to manually cross-check each CODEOWNERS entry against the project's direct memberships. Since the point of having a CODEOWNERS is almost always to ***enforce*** MR approvals of specific files/directories, this job makes sure that all CODEOWNERS entries are for ***direct members***, and are therefore ***required*** approvals. 
 
+From the [GitLab documentation](https://docs.gitlab.com/ee/user/project/codeowners/#group-inheritance-and-eligibility):
 > For approval to be *required*, groups as Code Owners must have a direct membership (not inherited membership) in the project. Approval can only be *optional* for groups that inherit membership. Members in the Code Owners group also must be direct members, and not inherit membership from any parent groups.
-
-Since we almost always want our CODEOWNERS file to **enforce** specific approvals, this job makes sure that the required direct memberships are present.
 
 
 ## Example CI/CD Component Usage
